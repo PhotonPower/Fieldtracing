@@ -13,10 +13,10 @@
 | `edge` | Kantenwelle, gleichmäßige erfc-Lösung; 2D: Randintegral, kritische Punkte 2. und 3. Art (Polygon, Kreis) | Abschnitt 6.1–6.2, Gl. keller_gtd, fresnel_edge, bdw |
 | `focus` | sphärische Austrittsphase, exakte Legendre-Transformation, Airy-Integral, Debye-Fokus per FFT (`debye_focus`, skalar und vektoriell) | Abschnitt 5.3, Gl. debye |
 | `lpia` | vektorielles Snellius-Gesetz, Fresnel-Koeffizienten, Operator T; Schritt durch gekrümmte Flächen mit Maschen-Jacobi (`trace_surface`, `mesh_jacobian`, `interface_amplitude`) | Abschnitt 3.2, 3.5 |
-| `selection` | Kennzahlen w, F, Kantenverhältnis, Aufwand, Minimax-Krümmung für die SFT | Kapitel 7 |
+| `selection` | Kennzahlen w, F, Kantenverhältnis, Aufwand, Minimax-Krümmung für die SFT; Auswahlregeln (`Situation`, `select_method`) und Fehlerterme (Debye, Kante auf Gitter) | Kapitel 7, Tabellen tab:selection, tab:errors |
 | `mesh` | Jacobi-Faktor aus unstrukturierten Strahlwolken: Delaunay-Triangulierung ohne Dreiecke über Obskurationen, Flächenverhältnis je Dreieck, Ableitungen per quadratischer Ausgleichsrechnung, Maslov-Index, Kaustik-Erkennung | Abschnitt 3.4, Gl. jacobian_amplitude, Erkenntnis „Nachbarschafts-Maschen“ |
 | `field` | `GridlessField` (Orts- und Frequenzbereich: Konstruktoren, Taylor-Phase, Residuumsinterpolation, Umtasten aufs Gitter mit Trägerphase, Adapter für Propagation und PFT) und `GriddedField` (Orts- oder Frequenzbereich, Gitter auch auf dem SFT-Gitter k = C·ρ′ über `lattice`) | Abschnitt 1.3, 7.2 |
-| `chain` | einheitliche Operatoren Feld → (Feld, Protokolleintrag) für alle Zeilen von Tabelle `tab:chaining`: geometrische Propagation (Hesse- oder Maschen-Jacobi), LPIA-Fläche auf Punktwolken, Blende, PFT/inverse PFT, Winkelspektrum (Punktwolke, Gitter, SFT-Gitter), SFT/inverse SFT, FFT/inverse FFT, Umtasten; `run_chain` | Abschnitt 2.1 (Gl. system_chain), 7.2 |
+| `chain` | einheitliche Operatoren Feld → (Feld, Protokolleintrag) für alle Zeilen von Tabelle `tab:chaining`: geometrische Propagation (Hesse- oder Maschen-Jacobi), LPIA-Fläche auf Punktwolken, Blende, PFT/inverse PFT, Winkelspektrum (Punktwolke, Gitter, SFT-Gitter), SFT/inverse SFT, FFT/inverse FFT, Umtasten, Debye-Fokus, direktes Rayleigh-Sommerfeld; `run_chain`; Planer `plan_interface`/`plan_propagation` mit Begründung und Fehlerbudget (`Plan`) | Abschnitt 2.1 (Gl. system_chain), 7.1–7.4 |
 
 Abhängigkeiten nur in einer Richtung: `units`, `fourier` < `propagation` < alle übrigen;
 `selection` und `mesh` hängen von keinem anderen Baustein ab; `chain` steht über allen.

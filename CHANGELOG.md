@@ -55,6 +55,12 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   `angular_spectrum` (Punktwolke, Gitter, SFT-Gitter), `sft`/`inverse_sft`, `fft`/`inverse_fft`,
   `resample`, `run_chain`; `GriddedField` mit `domain` und `lattice` (#19).
 
+- Planer nach den Auswahlregeln (#20): `selection.Situation`, `selection.select_method`,
+  Fehlerterme `debye_error`, `grid_edge_error`, `q_for_tolerance`; `chain.plan_interface`,
+  `chain.plan_propagation` mit Begründung, Fehlerbudget und Achszone (`Plan`), neue Operatoren
+  `chain.debye` und `chain.rayleigh_sommerfeld`. Integrationstest Linse → Kreisblende → Ebene
+  gegen direkte Rayleigh-Sommerfeld-Quadratur; Abweichungen zum Paper in #31.
+
 ### Behoben
 
 - `semiclassical.propagate_2d`: Die Strahlabbildung ∂ρ₂/∂ρ₁ wurde transponiert gebildet

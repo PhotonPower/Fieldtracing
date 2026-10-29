@@ -25,8 +25,14 @@ an analytic quadratic carrier; space or frequency, plain or on the SFT lattice k
 | `sft`, `inverse_sft` | grid with carrier ↔ grid on the lattice k = C·ρ' | discretisation |
 | `fft`, `inverse_fft` | plain grid ↔ plain grid | discretisation |
 | `resample` | cloud (space) → grid with carrier (only U interpolated, ADR 0003) | interpolation |
+| `debye` | cloud (space, exit plane) → grid in the focal region (eq. debye) | ≈ 1.5/N_F |
+| `rayleigh_sommerfeld` | plain space grid → grid (eq. rs_kernel, direct sum) | discretisation |
 
 Warnings are collected in the log entry instead of being emitted.
+
+The planner (`plan_interface`, `plan_propagation`) picks the operators of a step by the rules of
+table tab:selection (`selection.select_method`) and predicts the error budget of table
+tab:errors; `Plan.run` applies them.
 """
 
 from __future__ import annotations
@@ -39,16 +45,30 @@ from typing import Literal, Protocol, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.spatial import cKDTree
 
 from fieldtracing._types import ComplexArray, FloatArray
 from fieldtracing.field import GriddedField, GridlessField
-from fieldtracing.fourier import frequency_step, ft, ift
+from fieldtracing.focus import debye_focus
+from fieldtracing.fourier import centered_grid, frequency_step, ft, ift
 from fieldtracing.lpia import SagFunction, interface_amplitude, trace_surface
 from fieldtracing.mesh import Region, fit_derivatives, mesh_jacobian_cloud
 from fieldtracing.pft import inverse_pft_2d, pft_2d
 from fieldtracing.propagation import angular_spectrum as angular_spectrum_grid
-from fieldtracing.propagation import longitudinal_wavenumber
-from fieldtracing.selection import edge_wave_ratio, fresnel_width, local_fresnel_number, sft_gain
+from fieldtracing.propagation import longitudinal_wavenumber, rayleigh_sommerfeld_kernel
+from fieldtracing.selection import (
+    Situation,
+    debye_error,
+    edge_wave_ratio,
+    fit_curvature,
+    fresnel_width,
+    grid_edge_error,
+    local_fresnel_number,
+    q_for_tolerance,
+    select_method,
+    sft_gain,
+    sft_step,
+)
 from fieldtracing.semiclassical import propagate_2d
 from fieldtracing.sft import check_sft_sampling, inverse_sft_2d, region_weights, sft_2d
 from fieldtracing.units import wavenumber
@@ -645,3 +665,378 @@ def resample(
     grid = g.to_grid(n, step, c, method)
     rest = float(np.max(np.abs(g.gradient - g.points @ c))) * step
     return grid, LogEntry("resample", {"residual_phase_per_step": rest, "window_mm": n * step})
+
+
+# ----- focus: Debye integral and Rayleigh-Sommerfeld (paper, sections 2 and 5.3) ----------------
+
+
+def debye(
+    f: GridlessField | GriddedField,
+    distance: float,
+    sin_max: float,
+    n: int = 64,
+    pad: int = 4,
+) -> Step:
+    """Field near the focus by the Debye integral (eq. debye, `focus.debye_focus`).
+
+    The reference sphere is centred on the axis in the target plane (f = distance). Its phase
+    -k(sqrt(f² + ρ²) - f) is removed from the cloud; the rest U·exp(i(ψ - ψ_sphere)) is smooth
+    (aberration and defocus) and is the only interpolated quantity (ADR 0003). The k-domain
+    |k⊥| ≤ k·sin_max is the image of the stop |ρ| ≤ f·sin_max/cos θ_max under the sphere's ray
+    map, with subpixel-weighted boundary.
+
+    Args:
+        f: GridlessField in the space domain (exit plane, stop not yet applied).
+        distance: exit plane → target plane in mm.
+        sin_max: sine of the marginal-ray angle (stop radius a: a/sqrt(a² + distance²)).
+        n, pad: samples across the k-disc and zero-padding factor (`debye_focus`).
+
+    Returns:
+        GriddedField (space) in the target plane, constant phase k·f included.
+    """
+    g = _cloud(f, "space", "debye")
+    k = g.k
+
+    def residual(x: FloatArray, y: FloatArray) -> ComplexArray:
+        q = np.stack([np.ravel(x), np.ravel(y)], axis=-1)
+        sphere = -k * (np.sqrt(distance**2 + np.sum(q * q, axis=1)) - distance)
+        v = g.residual_at(q) * np.exp(1j * (g.phase_at(q) - sphere))[:, None]
+        return np.asarray(v.reshape(*np.shape(x), 3))
+
+    focal = debye_focus(residual, distance, k, sin_max, n=n, pad=pad)
+    values = np.asarray(focal.values * np.exp(1j * focal.phase_offset))
+    out = GriddedField(float(focal.x[1] - focal.x[0]), values, g.wavelength_um, g.refractive_index)
+    n_f = (distance * sin_max) ** 2 / (1.0 - sin_max**2) * k / (2.0 * math.pi * distance)
+    metrics = {"distance_mm": distance, "sin_max": sin_max, "fresnel_number": n_f}
+    notes: tuple[str, ...] = ()
+    if debye_error(n_f) > 0.1:
+        notes = (f"Debye error 1.5/N_F = {debye_error(n_f):.3g} (N_F = {n_f:.3g})",)
+    return out, LogEntry("debye", metrics, notes)
+
+
+def rayleigh_sommerfeld(
+    f: GridlessField | GriddedField, distance: float, n_out: int, step_out: float
+) -> Step:
+    """Direct Rayleigh-Sommerfeld integral (eq. rs_kernel) onto an n_out² grid at `distance` mm.
+
+    Rectangle rule over a plain space grid (the carrier must be resolved); cost N_in·N_out.
+
+    Args:
+        f: plain GriddedField in the space domain.
+        distance: plane distance in mm (> 0).
+        n_out, step_out: centred output grid (mm).
+    """
+    g = _grid(f, "space", "rayleigh_sommerfeld")
+    if not g.plain:
+        raise ValueError("rayleigh_sommerfeld needs a plain grid")
+    phys = g.physical().reshape(-1, 3)
+    keep = np.any(phys != 0.0, axis=1)
+    x = g.x
+    src = np.stack(np.meshgrid(x, x), axis=-1).reshape(-1, 2)[keep]
+    values = phys[keep] * g.step**2
+    xo = centered_grid(n_out, step_out)
+    tgt = np.stack(np.meshgrid(xo, xo), axis=-1).reshape(-1, 2)
+    out = np.empty((len(tgt), 3), dtype=np.complex128)
+    chunk = max(1, 2_000_000 // max(len(src), 1))
+    for i in range(0, len(tgt), chunk):
+        t = tgt[i : i + chunk]
+        kern = rayleigh_sommerfeld_kernel(
+            t[:, None, 0] - src[None, :, 0], t[:, None, 1] - src[None, :, 1], distance, g.k
+        )
+        out[i : i + chunk] = kern @ values
+    grid = GriddedField(step_out, out.reshape(n_out, n_out, 3), g.wavelength_um, g.refractive_index)
+    return grid, LogEntry(
+        "rayleigh_sommerfeld", {"distance_mm": distance, "sources": float(len(src))}
+    )
+
+
+# ----- planner (paper, section 7: tables tab:selection, tab:errors; eq. sft_gain) ----------------
+
+
+@dataclass(frozen=True)
+class Plan:
+    """Operators for one step with the reasons and the predicted error budget.
+
+    Attributes:
+        method: chosen building block (`selection.METHODS`).
+        reason: deciding figures in words.
+        situation: the figures of merit (`selection.Situation`).
+        budget: predicted relative errors per source of table tab:errors (relative to the
+            largest field amplitude in the target plane).
+        operators: the chain to apply (`run`).
+        warnings: known limitations of the plan.
+        parameters: numerical parameters (grid size, step, q, zones; names carry units).
+    """
+
+    method: str
+    reason: str
+    situation: Situation
+    budget: Mapping[str, float]
+    operators: tuple[Operator, ...]
+    warnings: tuple[str, ...] = ()
+    parameters: Mapping[str, float] = field(default_factory=dict)
+
+    @property
+    def predicted_error(self) -> float:
+        """Sum of the budget terms (conservative; the largest term dominates, paper 7.3)."""
+        return float(sum(self.budget.values()))
+
+    def run(
+        self, start: GridlessField | GriddedField
+    ) -> tuple[GridlessField | GriddedField, tuple[LogEntry, ...]]:
+        """Apply the operators (`run_chain`)."""
+        if not self.operators:
+            raise ValueError(f"no operators for method {self.method!r} (not implemented)")
+        return run_chain(start, self.operators)
+
+
+def plan_interface(
+    f: GridlessField,
+    n2: float,
+    sag: SagFunction,
+    sag_gradient: Callable[[FloatArray, FloatArray], tuple[FloatArray, FloatArray]],
+    z_out: float,
+    surface_radius: float,
+    tolerance: float = 0.02,
+) -> Plan:
+    """Plan an interface (row "Grenzfläche" of table tab:selection).
+
+    The LPIA error is taken as λ/R_c with R_c the smaller of the surface radius and the incident
+    wavefront radius k/|h|_max (order of magnitude only; paper cites von Pfeil et al. 2000).
+
+    Args:
+        surface_radius: smallest curvature radius of the surface in mm (inf for a plane).
+    """
+    g = _cloud(f, "space", "plan_interface")
+    h_max = float(np.max(np.abs(np.linalg.eigvalsh(g.hessian)))) if len(g.points) else 0.0
+    wavefront = g.k / h_max if h_max > 0.0 else math.inf
+    radius = min(abs(surface_radius), wavefront)
+    lam = 2.0 * math.pi / max(g.k, n2 * g.k / g.refractive_index)
+    s = Situation(interface=True, curvature_radius_mm=radius, wavelength_mm=lam)
+    method, reason = select_method(s, tolerance)
+    ops: tuple[Operator, ...] = ()
+    if method == "lpia":
+        ops = (_bind(lpia_surface, n2=n2, sag=sag, sag_gradient=sag_gradient, z_out=z_out),)
+    return Plan(method, reason, s, {"lpia": lam / radius}, ops)
+
+
+def _bind(op: Callable[..., Step], **kwargs: object) -> Operator:
+    def bound(f: GridlessField | GriddedField) -> Step:
+        return op(f, **kwargs)
+
+    bound.__name__ = op.__name__
+    return bound
+
+
+def _stop_size(stop: Aperture | None, points: FloatArray) -> float:
+    if isinstance(stop, CircularAperture):
+        return stop.radius
+    if isinstance(stop, RectangularAperture):
+        return min(stop.half_x, stop.half_y)
+    return float(np.max(np.hypot(points[:, 0], points[:, 1])))
+
+
+def _interpolation_error(g: GridlessField, mask: NDArray[np.bool_]) -> float:
+    """Linear residual interpolation error, estimated against Clough-Tocher at edge midpoints."""
+    pts = g.points[mask]
+    if len(pts) < 4:
+        return 0.0
+    _, idx = cKDTree(g.points).query(pts, k=2)
+    probes = 0.5 * (pts + g.points[idx[:, 1]])
+    lin, cub = g.residual_at(probes, "linear"), g.residual_at(probes, "cubic")
+    scale = float(np.max(np.abs(g.amplitude[mask])))
+    return float(np.max(np.abs(lin - cub))) / scale if scale > 0.0 else 0.0
+
+
+def plan_propagation(
+    f: GridlessField | GriddedField,
+    distance: float,
+    stop: Aperture | None = None,
+    tolerance: float = 0.02,
+    length_u: float | None = None,
+    focus_samples: int = 64,
+    method: str | None = None,
+) -> Plan:
+    """Plan stop + propagation of a space cloud to the plane at `distance` mm (section 7).
+
+    Figures (table tab:selection) over the samples inside the stop: F_j = |h_j|·L_U²
+    (L_U: stop radius by default), edge ratio w/(sqrt(2π) d_e), target Fresnel number
+    |h₂|·L_U²·|J| from the geometric propagation, N_F = F_max/(2π), and the samples per
+    direction of the SFT and of the direct FFT for the same edge accuracy q (cost, eq. sft_gain).
+    The chosen operators apply the stop themselves: on the cloud (geometric), on the grid with
+    subpixel weights (SFT, FFT, Rayleigh-Sommerfeld) or as the k-disc (Debye).
+
+    Error budget (table tab:errors), relative to the largest amplitude in the target plane:
+    stationary phase 1/F_min, edge wave w/(sqrt(2π) d_e), Debye 1.5/N_F, hard edge on a grid
+    0.4/q (`selection.grid_edge_error`), interpolation of U (linear against Clough-Tocher), k-disc
+    boundary of the Debye FFT 0.02/n. For a circular stop on a grid the budget does not hold
+    within `parameters["axis_zone_mm"]` of the axis (caustic of the edge wave, see warnings).
+
+    Args:
+        f: GridlessField in the space domain (the stop is not applied yet).
+        distance: plane distance in mm.
+        stop: aperture in the plane of the field (optional).
+        tolerance: ε of the selection rules.
+        length_u: variation length L_U of U in mm (default: stop radius or cloud radius).
+        focus_samples: samples across the k-disc (Debye) or per direction of the focal grid.
+        method: force a method instead of the selection rules (for comparisons).
+    """
+    g = _cloud(f, "space", "plan_propagation")
+    x, y = g.points[:, 0], g.points[:, 1]
+    lit = stop.inside(x, y) if stop is not None else np.ones(len(x), dtype=bool)
+    if not np.any(lit):
+        raise ValueError("no sample inside the stop")
+    a = _stop_size(stop, g.points[lit])
+    l_u = a if length_u is None else length_u
+    eig = np.abs(np.linalg.eigvalsh(g.hessian[lit]))
+    f_min = float(np.min(eig)) * l_u**2
+    f_max = float(np.max(eig)) * l_u**2
+    edge = 0.0
+    if stop is not None:
+        d_e = stop.edge_distance(x[lit], y[lit])
+        w = np.array([fresnel_width(float(h)) for h in np.min(eig, axis=1)])
+        edge = float(np.max(w / (math.sqrt(2.0 * math.pi) * np.maximum(d_e, 1e-300))))
+    target_fresnel = _target_fresnel(g.gradient[lit], g.hessian[lit], g.k, distance, l_u)
+    window = 2.0 * float(np.max(np.hypot(x[lit], y[lit])))
+    max_grad = float(np.max(np.abs(g.gradient[lit])))
+    q = q_for_tolerance(tolerance)
+    fft_grid = _fft_grid(g, distance, max_grad, window, q)
+    sft_grid: dict[str, float] = {"samples": math.inf}
+    c_fit: FloatArray = np.zeros((2, 2))
+    if f_max > 1.0:
+        c_fit, res_grad = fit_curvature(g.points[lit], g.gradient[lit])
+        if np.min(np.abs(np.linalg.eigvalsh(c_fit))) > 0.0:
+            sft_grid = _sft_grid(g, distance, c_fit, res_grad, window, q)
+    s = Situation(
+        fresnel_min=f_min,
+        fresnel_max=f_max,
+        edge_ratio=edge,
+        target_fresnel=target_fresnel,
+        fresnel_number=f_max / (2.0 * math.pi),
+        fft_samples=fft_grid["samples"],
+        sft_samples=sft_grid["samples"],
+    )
+    chosen, reason = select_method(s, tolerance)
+    if method is not None:
+        chosen, reason = method, f"forced (rules: {chosen}; {reason})"
+    interp = _interpolation_error(g, lit)
+    stop_ops: tuple[Operator, ...] = () if stop is None else (_bind(aperture, stop=stop),)
+    edge_term = grid_edge_error(q) if stop is not None else 0.0
+    notes: list[str] = []
+    params: dict[str, float] = {"length_u_mm": l_u, "tolerance": tolerance}
+    budget: dict[str, float] = {"interpolation": interp}
+    ops: tuple[Operator, ...] = ()
+    if chosen == "geometric":
+        budget = {"stationary_phase": 1.0 / f_min, "edge_wave": edge}
+        ops = (*stop_ops, _bind(geometric_propagation, distance=distance))
+    elif chosen in ("sft", "fft"):
+        grid = sft_grid if chosen == "sft" else fft_grid
+        n, step = int(grid["samples"]), grid["step_mm"]
+        params.update(grid)
+        if chosen == "sft":
+            ops = (
+                _bind(resample, n=n, step=step, curvature=c_fit),
+                *stop_ops,
+                sft,
+                _bind(angular_spectrum, dz=distance),
+                inverse_sft,
+            )
+        else:
+            ops = (
+                _bind(resample, n=n, step=step),
+                *stop_ops,
+                fft,
+                _bind(angular_spectrum, dz=distance),
+                inverse_fft,
+            )
+        budget["hard_edge_grid"] = edge_term
+    elif chosen == "debye":
+        sin_max = a / math.hypot(a, distance)
+        ops = (_bind(debye, distance=distance, sin_max=sin_max, n=focus_samples),)
+        budget.update({"debye": debye_error(s.fresnel_number), "k_boundary": 0.02 / focus_samples})
+    elif chosen == "rayleigh_sommerfeld":
+        step = fft_grid["step_mm"]
+        n = _even(1.1 * window / step)
+        sin_max = a / math.hypot(a, distance)
+        step_out = 2.0 * math.pi / g.k / sin_max / 8.0  # λ/(8 sin θ): ~4 samples per Airy radius
+        ops = (
+            _bind(resample, n=n, step=step),
+            *stop_ops,
+            _bind(rayleigh_sommerfeld, distance=distance, n_out=focus_samples, step_out=step_out),
+        )
+        params.update({"step_mm": step, "samples": float(n), "step_out_mm": step_out})
+        budget["hard_edge_grid"] = edge_term
+    else:
+        notes.append(f"method {chosen!r} has no operator chain yet")
+    if chosen in ("sft", "fft") and isinstance(stop, CircularAperture):
+        # Fresnel rings in the target plane are about sqrt(2|C'|) wide with the paraxial
+        # spectral curvature C' = 1/|h| - d/k after the propagation (paper, section 7.5)
+        h = float(np.max(eig))
+        ring = (
+            math.sqrt(2.0 * abs(1.0 / h - distance / g.k))
+            if h > 0
+            else math.sqrt(2.0 * distance / g.k)
+        )
+        params["axis_zone_mm"] = 3.0 * ring
+        notes.append(
+            "circular stop: the edge wave has a caustic on the axis (Poisson spot); within "
+            f"{3.0 * ring:.3g} mm of the axis the grid edge error exceeds the budget"
+        )
+    return Plan(chosen, reason, s, budget, ops, tuple(notes), params)
+
+
+def _target_fresnel(
+    gradient: FloatArray, hessian: FloatArray, k: float, distance: float, l_u: float
+) -> float:
+    """Smallest local Fresnel number |h₂|·L_U²·|J| in the target plane (no division by J).
+
+    With the ray map M = ∂ρ₂/∂ρ₁ = I + d·∂(p/k_z)/∂p·H₁ the new Hessian is H₂ = H₁M⁻¹, so
+    H₂·det M = H₁·adj M stays finite at a focus; its smallest singular value times L_U² is the
+    figure (the footprint of the beam scales with |J|, its curvature with H₂).
+    """
+    kz = np.sqrt(k * k - np.sum(gradient * gradient, axis=1))
+    dir_jac = (
+        np.eye(2)[None] / kz[:, None, None]
+        + np.einsum("ni,nj->nij", gradient, gradient) / (kz**3)[:, None, None]
+    )
+    m = np.eye(2)[None] + distance * np.einsum("nij,njk->nik", dir_jac, hessian)
+    adj = np.empty_like(m)
+    adj[:, 0, 0], adj[:, 1, 1] = m[:, 1, 1], m[:, 0, 0]
+    adj[:, 0, 1], adj[:, 1, 0] = -m[:, 0, 1], -m[:, 1, 0]
+    sigma = np.linalg.svd(np.einsum("nij,njk->nik", hessian, adj), compute_uv=False)
+    return float(np.min(sigma[:, -1])) * l_u**2
+
+
+def _even(n: float) -> int:
+    m = int(math.ceil(n))
+    return m + (m % 2)
+
+
+def _sft_grid(
+    g: GridlessField, distance: float, c_fit: FloatArray, res_grad: float, window: float, q: float
+) -> dict[str, float]:
+    """Step and size of the SFT chain (paper, 7.5 step 3b).
+
+    Step min(w_c/q, π/max|∇ψ_res|) (`selection.sft_step`); window ≥ 1.3 × illuminated width and
+    ≥ 1.1 × 2π/(|c|Δx) for the chirps of the forward SFT (C) and of the inverse SFT
+    (Q = Cᵀ(-C⁻¹ - d/k)C), so the same grid serves both. The chirp condition alone gives
+    n ≈ π q²/m with the magnification m = 1 + d·c/k.
+    """
+    c_abs = np.abs(np.linalg.eigvalsh(c_fit))
+    step = sft_step(float(np.max(c_abs)), q, res_grad)
+    b = -np.linalg.inv(c_fit) - distance / g.k * np.eye(2)
+    q_inv = c_fit.T @ b @ c_fit
+    q_abs = np.abs(np.linalg.eigvalsh(0.5 * (q_inv + q_inv.T)))
+    chirp = 2.0 * math.pi / (float(min(np.min(c_abs), np.min(q_abs))) * step)
+    n = _even(max(1.3 * window, 1.1 * chirp) / step)
+    return {"samples": float(n), "step_mm": step, "q": q}
+
+
+def _fft_grid(
+    g: GridlessField, distance: float, max_grad: float, window: float, q: float
+) -> dict[str, float]:
+    """Step and size of the direct FFT chain: q samples per Fresnel width sqrt(2d/k) and twice
+    the Nyquist rate of the full phase; window twice the illuminated width (periodic)."""
+    w = math.sqrt(2.0 * distance / g.k)
+    step = min(w / q, math.pi / max(max_grad, 1e-300) / 2.0)
+    return {"samples": float(_even(2.0 * window / step)), "step_mm": step, "q": w / step}
