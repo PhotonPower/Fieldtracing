@@ -29,7 +29,7 @@ from typing import Any
 import numpy as np
 
 from fieldtracing._types import ComplexArray, FloatArray, IntArray
-from fieldtracing.field import GridlessField
+from fieldtracing.field import GriddedField, GridlessField
 from fieldtracing.mesh import CloudJacobian, Region, fit_derivatives, mesh_jacobian_cloud
 from fieldtracing.units import wavenumber
 
@@ -230,3 +230,59 @@ def trace_field(
         max_edge=max_edge,
         region=region,
     )
+
+
+def debye_psf(
+    system: Any,
+    exit_z: float,
+    rings: int = 40,
+    n: int = 128,
+    pad: int = 4,
+    jones: ComplexArray | None = None,
+    path: int | str = 0,
+) -> tuple[GriddedField, float]:
+    """Vector PSF of the axial field in the image plane by the Debye integral (paper, eq. debye).
+
+    Rays of `raytatouille.trace.HexapolarPupil(rings)` (rim included) give the field on the exit
+    plane z = exit_z in image space (`trace_field`); `chain.debye` integrates over the disc
+    |k⊥| ≤ k·sin θ_max onto the image plane (z of the chief ray on the image surface), with the
+    reference sphere centred there. The Strehl ratio divides by the same integral with the
+    aberration removed (spherical phase, same amplitude). Axial field only (sphere on the axis).
+
+    Returns:
+        (field (N·pad)² × 3 in the image plane, Strehl ratio from |E|² at the centre).
+    """
+    import raytatouille as rt
+
+    from fieldtracing.chain import debye
+
+    chief = rt.trace.make_rays(system, rt.trace.SinglePupilPoint(), path=path, fields=[0])
+    rt.trace.trace(system, chief, path=path)
+    z_image = float(chief.pos_z[0])
+    exit_field, _ = trace_field(
+        system, rt.trace.HexapolarPupil(rings), exit_z, jones=jones, path=path
+    )
+    f = z_image - exit_z
+    p = exit_field.points
+    a = float(np.max(np.hypot(p[:, 0], p[:, 1])))
+    sin_max = a / float(np.hypot(a, f))
+    k = exit_field.k
+    focal, _ = debye(exit_field, f, sin_max, n=n, pad=pad)
+    r = np.sqrt(f * f + np.sum(p * p, axis=1))
+    outer = np.einsum("ni,nj->nij", p, p)
+    sphere = GridlessField(
+        p,
+        -k * (r - f),
+        -k * p / r[:, None],
+        -k * (np.eye(2)[None] / r[:, None, None] - outer / (r**3)[:, None, None]),
+        exit_field.amplitude,
+        exit_field.wavelength_um,
+        exit_field.refractive_index,
+    )
+    perfect, _ = debye(sphere, f, sin_max, n=n, pad=pad)
+    assert isinstance(focal, GriddedField) and isinstance(perfect, GriddedField)
+    c = focal.values.shape[0] // 2
+    strehl = float(
+        np.sum(np.abs(focal.values[c, c]) ** 2) / np.sum(np.abs(perfect.values[c, c]) ** 2)
+    )
+    return focal, strehl

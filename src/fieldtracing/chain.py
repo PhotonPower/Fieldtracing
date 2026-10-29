@@ -683,7 +683,9 @@ def debye(
     -k(sqrt(f² + ρ²) - f) is removed from the cloud; the rest U·exp(i(ψ - ψ_sphere)) is smooth
     (aberration and defocus) and is the only interpolated quantity (ADR 0003). The k-domain
     |k⊥| ≤ k·sin_max is the image of the stop |ρ| ≤ f·sin_max/cos θ_max under the sphere's ray
-    map, with subpixel-weighted boundary.
+    map, with subpixel-weighted boundary; boundary cells whose centre lies just outside the
+    samples take the nearest sample (the disc weights alone set the edge, otherwise the edge
+    would shrink by up to a cell and the error would be first order in the k-step).
 
     Args:
         f: GridlessField in the space domain (exit plane, stop not yet applied).
@@ -700,7 +702,7 @@ def debye(
     def residual(x: FloatArray, y: FloatArray) -> ComplexArray:
         q = np.stack([np.ravel(x), np.ravel(y)], axis=-1)
         sphere = -k * (np.sqrt(distance**2 + np.sum(q * q, axis=1)) - distance)
-        v = g.residual_at(q) * np.exp(1j * (g.phase_at(q) - sphere))[:, None]
+        v = g.residual_at(q, outside="nearest") * np.exp(1j * (g.phase_at(q) - sphere))[:, None]
         return np.asarray(v.reshape(*np.shape(x), 3))
 
     focal = debye_focus(residual, distance, k, sin_max, n=n, pad=pad)

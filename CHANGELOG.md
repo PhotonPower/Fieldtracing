@@ -78,6 +78,12 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   Maschen-Jacobi, Hesse-Matrix aus den Nachbarstrahlen; vignettierte Strahlen ausgeschlossen);
   `field_operator` mit wählbaren Ebenennormalen (#24).
 
+- `rtt_bridge.debye_psf`: vektorielle Debye-PSF des Achsfeldes aus Raytatouille-Strahlen mit
+  Strehl; Vergleich mit Raytatouilles FFT-PSF in `docs/vergleich-psf.md` (Bild aus
+  `experiments/vergleich_psf.py`), Issue-Entwurf für Raytatouille in
+  `docs/rtt-entwurf-psf-hohe-na.md` (#25).
+- `GridlessField.residual_at(..., outside="nearest")` (#25).
+
 ### Behoben
 
 - `semiclassical.propagate_2d`: Die Strahlabbildung ∂ρ₂/∂ρ₁ wurde transponiert gebildet
@@ -87,6 +93,10 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   der Maschen-Jacobi-Matrix in #19, Regressionstest mit zentralen Differenzen.
 
 ### Geändert
+
+- `chain.debye` nimmt am Rand der k-Scheibe den nächsten Strahlwert statt 0; der Rand der
+  Scheibe kommt allein aus den Subpixel-Gewichten. Vorher konvergierte der Strehl-Wert nur mit
+  erster Ordnung in der k-Schrittweite (#25).
 
 - Paper: Gültigkeitsgrenze der Debye-Näherung quantifiziert (≈ 1,5/N_F statt N_F ≲ 10),
   Abschnitt 5.3, Tabellen 7.1 und 7.3, Testliste in Kapitel 8 (#8).

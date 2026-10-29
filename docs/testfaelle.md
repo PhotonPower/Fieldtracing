@@ -388,3 +388,18 @@ ausgefransten Rand der Gitterpupille etwas langsamer.
   und Feld 5°), Quadraturfehler O(h²).
 - **Ohne Raytatouille:** gekippte ebene Welle in einem Medium: J = 1/cos γ zwischen
   Wellenfrontebene und z-Ebene, Amplitude = projizierter Jones-Vektor, Phase k₀n k·r.
+
+## Debye-PSF aus Raytatouille-Strahlen gegen Raytatouilles FFT-PSF (Issue #25, Marker `rtt`)
+
+Bericht mit Bild: `docs/vergleich-psf.md`.
+
+- **NA 0,05** (Einzellinse f = 100 mm, sphärische Aberration): Strehl 0,73820 (Debye) gegen
+  0,73815 (Raytatouille `psf`, grid 256); Profil gegen `psf_at` bis 8 Airy-Radien: 1,7·10⁻⁴
+  Strehl-Einheiten. Test: Strehl auf 10⁻³, Profil auf 5·10⁻⁴ (40 Ringe, n = 128).
+- **NA 0,9** (ideale Linse): Raytatouilles PSF rotationssymmetrisch und um tan θ/sin θ zu schmal
+  (affine Pupillenabbildung mit Steigung tan θ_max); Test: FWHM_RT·tan θ/sin θ = FWHM einer
+  gleichmäßigen Pupille bis NA 0,9 auf 3 %. Vektoriell: FWHM_x > 1,3·FWHM_y, E_z-Anteil 25–40 %
+  (gemessen 32 %), Strehl der idealen Linse 1 (< 10⁻⁵).
+- **Konvergenz von `chain.debye`** mit `residual_at(..., outside="nearest")`: Strehl 0,7371,
+  0,7380, 0,7382 bei n = 64, 128, 256; vorher mit Null außerhalb der Wolke 0,748 … 0,739, erste
+  Ordnung.
