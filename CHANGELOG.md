@@ -70,6 +70,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   `rtt.yml` mit vcpkg- und Rad-Cache, Rauchtest an der Einzellinse aus Raytatouilles
   Referenzmodellen.
 
+- `rtt_bridge.field_operator`, `transverse_prt`, `absorption_factor`: Feldamplitude aus
+  Raytatouilles leistungsnormierter PRT-Matrix und Gewicht, Herleitung in ADR 0004 (#23).
+
 ### Behoben
 
 - `semiclassical.propagate_2d`: Die Strahlabbildung ∂ρ₂/∂ρ₁ wurde transponiert gebildet

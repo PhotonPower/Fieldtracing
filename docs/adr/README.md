@@ -9,6 +9,7 @@ datierter Nachtrag ans Ende (wie in Raytatouille).
 | [0001](0001.md) | Python-Referenzimplementierung, Port nach Raytatouille | angenommen |
 | [0002](0002.md) | Konventionen von Raytatouille | angenommen |
 | [0003](0003.md) | Hybride Rückgabe und Interpolationsregel | angenommen |
+| [0004](0004.md) | Feldamplitude aus Raytatouilles leistungsnormierter PRT-Matrix und Gewicht | vorgeschlagen |
 
 ## Vorlage
 
