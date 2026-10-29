@@ -113,6 +113,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 - ADR-Entwurf für Raytatouille: Bibliothek `rtt-field` (`docs/rtt-port/adr-entwurf-rtt-field.md`,
   #51).
 
+- API-Skizze für `rtt-field` (`docs/rtt-port/api-skizze.md`) mit Test, dass jede öffentliche
+  Funktion und Klasse zugeordnet ist (#52).
+
 ### Geändert
 
 - Paper, Abschnitt 7.5 (#43): periodische Kopien der Fokus-FFT (N ≈ 80 statt 40 für 10⁻³),
