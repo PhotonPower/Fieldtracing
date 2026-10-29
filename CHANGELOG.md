@@ -98,6 +98,10 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   Scheibe kommt allein aus den Subpixel-Gewichten. Vorher konvergierte der Strehl-Wert nur mit
   erster Ordnung in der k-Schrittweite (#25).
 
+- Paper, Kapitel 7 (#31): Kantenfehler auf 2D-Gittern ≲ 0,4/q, Verstärkung auf der Achse
+  rotationssymmetrischer Blenden (Kaustik der Kantenwelle) in Tabelle tab:errors,
+  Untergrenze N_SFT ≳ πq²/m im Abschnitt Aufwand, Fehlerbudget des Beispiels 2–4 % mit Achszone.
+
 - Paper: Gültigkeitsgrenze der Debye-Näherung quantifiziert (≈ 1,5/N_F statt N_F ≲ 10),
   Abschnitt 5.3, Tabellen 7.1 und 7.3, Testliste in Kapitel 8 (#8).
 
