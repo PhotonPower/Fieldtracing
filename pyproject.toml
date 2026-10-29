@@ -25,7 +25,9 @@ fieldtracing = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra"
+# Expensive reference computations carry the marker `slow`; run them with `pytest -m slow`.
+addopts = "-ra -m 'not slow'"
+markers = ["slow: expensive reference computation (nightly workflow, pytest -m slow)"]
 
 [tool.ruff]
 line-length = 100
