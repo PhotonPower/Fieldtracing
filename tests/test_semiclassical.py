@@ -77,3 +77,37 @@ def test_jacobian_law_2d() -> None:
     interp = RegularGridInterpolator((x, x), np.abs(exact))  # |E| is smooth; axes (y, x)
     numeric = interp(np.stack([res.points[:, 1], res.points[:, 0]], axis=1))
     assert np.allclose(numeric, np.abs(res.amplitude), rtol=3e-3)
+
+
+def test_new_hessian_for_non_commuting_hessian_and_ray_directions() -> None:
+    # Tilted astigmatic quadratic phase: H and ∂(p/k_z)/∂p do not commute off axis. Reference:
+    # H₂ = ∂∇ψ/∂ρ₂ = C·(∂ρ₂/∂ρ₁)⁻¹ with ∂ρ₂/∂ρ₁ from central differences of the landing points.
+    k, d, eps = wavenumber(0.5), 10.0, 1e-5
+    c = np.array([[-400.0, 60.0], [60.0, -250.0]])
+    pts = np.array([[1.2, -0.7], [-0.9, 1.4], [0.3, 0.2]])
+
+    def landing(p: FloatArray) -> FloatArray:
+        g = p @ c
+        return propagate_2d(
+            p, np.ones(len(p), np.complex128), np.zeros(len(p)), g, np.tile(c, (len(p), 1, 1)), k, d
+        ).points
+
+    res = propagate_2d(
+        pts,
+        np.ones(len(pts), np.complex128),
+        np.zeros(len(pts)),
+        pts @ c,
+        np.tile(c, (3, 1, 1)),
+        k,
+        d,
+    )
+    for i, p in enumerate(pts):
+        fd = np.empty((2, 2))
+        for j in range(2):
+            step = np.zeros(2)
+            step[j] = eps
+            fd[:, j] = (landing((p + step)[None])[0] - landing((p - step)[None])[0]) / (2 * eps)
+        assert res.curvature is not None
+        assert np.allclose(res.curvature[i], c @ np.linalg.inv(fd), rtol=1e-7, atol=1e-6)
+        assert np.allclose(res.curvature[i], res.curvature[i].T, rtol=1e-12)
+        assert res.jacobian[i] == pytest.approx(np.linalg.det(fd), rel=1e-8)

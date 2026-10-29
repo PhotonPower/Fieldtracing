@@ -48,6 +48,31 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   vektorisiert über beliebig viele Strahlen, Totalreflexion als Maske; `trace_surface` nutzt sie
   (≈ 130-mal schneller) und liefert `SurfaceTrace.total_reflection` (#21).
 
+- `mesh.triangulate`, `mesh.triangle_area_ratio`, `mesh.fit_derivatives` und
+  `mesh.mesh_jacobian_cloud`: Jacobi-Faktor, Maslov-Index und Kaustik-Erkennung aus
+  unstrukturierten Strahlwolken (Delaunay, Obskurationen, quadratische Ausgleichsrechnung,
+  Fehler O(h²)) (#18).
+
+- `chain`: einheitliche Operatoren mit Protokoll (Gl. system_chain, Tabelle tab:chaining):
+  `geometric_propagation` (Hesse- oder Maschen-Jacobi), `lpia_surface` auf Punktwolken,
+  `aperture` (`CircularAperture`, `RectangularAperture`), `pft`/`inverse_pft`,
+  `angular_spectrum` (Punktwolke, Gitter, SFT-Gitter), `sft`/`inverse_sft`, `fft`/`inverse_fft`,
+  `resample`, `run_chain`; `GriddedField` mit `domain` und `lattice` (#19).
+
+- Planer nach den Auswahlregeln (#20): `selection.Situation`, `selection.select_method`,
+  Fehlerterme `debye_error`, `grid_edge_error`, `q_for_tolerance`; `chain.plan_interface`,
+  `chain.plan_propagation` mit Begründung, Fehlerbudget und Achszone (`Plan`), neue Operatoren
+  `chain.debye` und `chain.rayleigh_sommerfeld`. Integrationstest Linse → Kreisblende → Ebene
+  gegen direkte Rayleigh-Sommerfeld-Quadratur; Abweichungen zum Paper in #31.
+
+### Behoben
+
+- `semiclassical.propagate_2d`: Die Strahlabbildung ∂ρ₂/∂ρ₁ wurde transponiert gebildet
+  (H·∂(p/k_z)/∂p statt ∂(p/k_z)/∂p·H). J und μ blieben richtig, die neue Hesse-Matrix aus #17
+  aber nicht, sobald H und die Strahlrichtungen nicht vertauschen (gekippte astigmatische Phase,
+  relativer Fehler ≈ 4·10⁻⁴); sphärische Wellen waren nicht betroffen. Gefunden beim Vergleich mit
+  der Maschen-Jacobi-Matrix in #19, Regressionstest mit zentralen Differenzen.
+
 ### Geändert
 
 - Paper: Gültigkeitsgrenze der Debye-Näherung quantifiziert (≈ 1,5/N_F statt N_F ≲ 10),

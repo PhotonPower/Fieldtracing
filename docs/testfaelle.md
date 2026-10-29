@@ -215,6 +215,122 @@ U·e^(iψ) über 50 %.
 PFT hin und zurück über die Feldobjekte ist exakt; geometrische Propagation einer sphärischen
 Welle um 10 mm liefert die Hesse-Matrix der Welle mit f = 15 mm (H₂ = H₁·(∂ρ₂/∂ρ₁)⁻¹).
 
+## Jacobi-Faktor aus unstrukturierten Strahlwolken (Issue #18)
+
+Sollwert: analytisches J aus `semiclassical.propagate_2d` (über die analytische Hesse-Matrix,
+Gl. jacobian_relation), λ = 0,5 µm. Wolke: Gitter über ±2 mm mit zufälliger Verschiebung um
+±0,3 h je Punkt (Seed 7), Delaunay-Triangulierung, Randsplitter (Formgüte < 0,2) abgeschält.
+Maximaler relativer Fehler von J über **alle** Knoten einschließlich Rand:
+
+| f_x, f_y (mm) | d (mm) | μ | 41² Strahlen | 81² Strahlen | Verhältnis |
+| --- | --- | --- | --- | --- | --- |
+| 25, 25 | 10 | 0 | 3,0·10⁻⁵ | 8,6·10⁻⁶ | 3,5 |
+| 20, 40 (zwischen den Brennlinien) | 30 | 1 | 1,8·10⁻⁴ | 5,8·10⁻⁵ | 3,1 |
+| 20, 20 (hinter dem Punktfokus) | 40 | 2 | 1,4·10⁻⁴ | 4,1·10⁻⁵ | 3,5 |
+| 20, 40 (hinter beiden Brennlinien) | 60 | 2 | 1,8·10⁻⁴ | 5,8·10⁻⁵ | 3,1 |
+
+Zweite Ordnung in h (quadratische Ausgleichsrechnung über den Zwei-Ring der Maschennachbarn).
+Der Maslov-Index aus den Eigenwerten stimmt an allen Knoten. Das flächengewichtete Mittel der
+Dreiecks-Flächenverhältnisse an den Knoten ist nur etwa erster Ordnung (RMS-Fehler sinkt um den
+Faktor 2,3–2,5 je Halbierung von h). Ohne Abschälen der Randsplitter stagniert der Randfehler bei
+≈ 4·10⁻⁴, weil Splitter weit entfernte Randstrahlen koppeln.
+
+- **Gleichverteilte Zufallswolke** (Seed 3): 1,9·10⁻⁴ (400 Punkte), 6,8·10⁻⁵ (1600),
+  2,5·10⁻⁵ (6400); konvergent, ohne feste Ordnung (Poisson-Wolke).
+- **Regelmäßiges Gitter:** gegen `lpia.mesh_jacobian` bei quadratischer Abbildung bis auf
+  Rundung (< 10⁻¹²), allgemein Abweichung O(h²) (2,3·10⁻⁵ bei 21², 5,7·10⁻⁶ bei 41²).
+- **Affine Abbildung:** Dreiecksverhältnisse und Ableitungen exakt; gespiegelte Abbildung ergibt
+  negative Verhältnisse.
+- **Zentrale Obskuration** (Ringblende 0,6–2 mm): Delaunay allein füllt das Loch; mit
+  `max_edge = 2h` oder Gebietsprädikat liegt kein Dreieck darüber, die Fläche des Netzes bleibt
+  kleiner als die Ringfläche, J auf allen Knoten < 5·10⁻⁴ genau.
+- **Kaustik in der Zielebene** (konvergente Welle mit sphärischer Aberration, f = 20 mm,
+  d = 18 mm, ψ = −k(ρ²/(2f) + bρ⁴/4), b = 9,45·10⁻⁴ mm⁻²): J wechselt auf einem Kreis
+  ρ ≈ 1,35 mm das Vorzeichen. Markiert werden nur Knoten innerhalb 2h vom Kaustikkreis, jeder
+  Knoten mit falschem Vorzeichen ist markiert, an allen übrigen stimmt μ (0 innen, 1 außen).
+
+## Operatorkette (Issue #19)
+
+Jeder Operator in `chain.py` gibt `(Feld, LogEntry)` zurück; das Protokoll enthält die Kennzahlen
+aus `selection.py` (w, F, Kantenverhältnis, SFT-Kennzahlen) und die Gültigkeitswarnungen.
+
+**Regression gegen F1** (gleiches Ergebnis wie der Baustein): geometrische Propagation =
+`propagate_2d`, PFT/inverse PFT = `pft_2d`/`inverse_pft_2d`, SFT = `sft_2d` je Komponente,
+FFT = `fourier.ft`, Blende auf dem Gitter = `circular_aperture_weights`, LPIA auf der Punktwolke
+= `trace_surface` + `interface_amplitude` mit `lpia.mesh_jacobian` (< 10⁻¹², Sphäre um den Fokus;
+dort zusätzlich |E₂| = |t|·|E₁|·r₁/r₂ und ∇ψ₂ wie die Kugelwelle in n₂ bis auf Rundung, neue
+Hesse-Matrix aus den Maschenableitungen auf 10⁻⁴).
+
+**Exakte Operatoren invertierbar** (bis auf Rundung): Winkelspektrum ±dz auf Punktwolke
+(Phase < 10⁻⁹ rad bei Phasen ~10⁵ rad), Frequenzgitter ohne und mit Träger (< 10⁻¹²);
+SFT hin und zurück (< 10⁻¹⁰); FFT hin und zurück (< 10⁻¹²).
+
+**Unabhängige Gegenproben der Buchführung:**
+
+- PFT → Winkelspektrum → inverse PFT = geometrische Propagation (`propagate_2d`): algebraische
+  Identität über die Legendre-Transformation, Amplitude < 10⁻¹⁰, auch hinter den Brennlinien
+  (Maslov-Phase) und für eine gekippte astigmatische Phase.
+- SFT → Winkelspektrum → inverse SFT gegen `propagation.angular_spectrum` auf einem Gitter halber
+  Schrittweite (Gauß × konvergente Kugelwelle, f = 50 mm, halber Weg zum Fokus; das
+  Ausgangsgitter ρ = (1 + dz·c/k)·u′ = u′/2 fällt auf das Referenzgitter): 9,6·10⁻⁸ relativ zum
+  Maximum. Paraxialer Anteil des Winkelspektrums wandert in den Träger, der Rest in die Werte.
+- FFT → Winkelspektrum → inverse FFT = `propagation.angular_spectrum` (< 10⁻¹²).
+- Geometrische Propagation mit Maschen-Jacobi gegen Hesse-Weg (gekippte astigmatische
+  quadratische Phase, 21²/41²/81² Strahlen): Amplitude 3,1·10⁻⁵ → 7,8·10⁻⁶ → 1,9·10⁻⁶,
+  neue Hesse-Matrix 4,7·10⁻⁵ → 1,2·10⁻⁵ → 3,0·10⁻⁶, beides O(h²).
+
+Beim letzten Vergleich fiel ein Fehler in `propagate_2d` auf (aus #17): die Strahlabbildung war
+transponiert, die neue Hesse-Matrix daher für nicht vertauschende H und Strahlrichtungen um
+≈ 4·10⁻⁴ falsch (J und μ waren richtig). Behoben, Regressionstest mit zentralen Differenzen in
+`test_semiclassical.py`.
+
+## Planer und Integrationstest Linse → Blende → Ebene (Issue #20)
+
+**Entscheidungstabelle** (`select_method`, ε = 2 %): je Zeile von Tabelle tab:selection ein Fall,
+dazu Totalausfall der LPIA (R ~ λ), „FFT billiger als SFT“ (Aufwand) und F zwischen 1 und 1/ε.
+Mit echten Feldern: Kugelwelle ohne Blende → geometrisch (Ergebnis identisch mit
+`geometric_propagation`), mit Blende → Gitterverfahren mit Achszone, Fokus → Debye bzw.
+Rayleigh-Sommerfeld, Zylinderwelle → gemischte Karte (noch ohne Operatoren), kollimiert mit
+Blende → FFT.
+
+**System:** kollimierter, x-polarisierter Strahl (λ = 0,5 µm) → Kugelfläche R = 5 mm Luft/Glas
+(n = 1,5, LPIA auf einer Wolke mit 61² Strahlen) → Kreisblende Radius a in der Austrittsebene →
+Ebene auf halbem Weg zum paraxialen Fokus bzw. Fokusebene (f ≈ 14,9 mm).
+
+**Referenz** (unabhängig von allen Kettenbausteinen): Austrittsfeld aus meridionaler
+Strahlrechnung in geschlossener Form (Snellius, Convention A, Gl. interface_amplitude mit
+radialem Jacobi-Faktor, Polarisation analytisch: E = e^{iψ}(−A_s sin φ e_φ + A_p cos φ
+(cos θ e_r + sin θ e_z))), dann Rayleigh-Sommerfeld-Integral über die Kreisscheibe (Gauß-Legendre
+in r mit exakter Kante, Trapez in φ). Knotenzahlen aus der größten Phasenänderung; bei 1,4-facher
+Knotenzahl ändert sich nichts (< 10⁻¹⁰).
+
+Fehler relativ zum größten |E| der Proben, außerhalb der Achszone (siehe unten):
+
+| System | Ebene | ε | Planer wählt | q | gemessen | Budget |
+| --- | --- | --- | --- | --- | --- | --- |
+| a = 0,354 mm (N_F ≈ 25) | f/2 | 4 % | FFT (502 statt 692 Punkte) | 10 | 1,2 % | 4,0 % |
+| a = 0,354 mm | f/2, SFT erzwungen | 4 % | SFT | 10 | 0,89 % | 4,0 % |
+| a = 0,707 mm (N_F ≈ 100, `slow`) | f/2 | 2 % | FFT (2010 statt 2772) | 20 | 1,3 % | 2,0 % |
+| a = 0,707 mm (`slow`) | f/2, SFT erzwungen | 2 % | SFT | 20 | 1,1 % | 2,0 % |
+| a = 0,354 mm | Fokus | 4 % | Rayleigh-Sommerfeld (1,5/N_F = 6 % > ε) | | 4·10⁻⁵ | 4,0 % |
+| a = 0,707 mm | Fokus | 2 % | Debye (1,5/N_F = 1,5 %) | | 0,30 % | 1,5 % |
+
+Das Budget ist bei Rayleigh-Sommerfeld im Fokus sehr großzügig: Der Kantenterm 0,4/q ist für das
+Fokusfeld nicht maßgeblich.
+
+**Abweichungen zwischen Budget und Messung** (Issue #31, Label `paper`):
+
+- *Achs-Kaustik der Kantenwelle:* Innerhalb von etwa drei Fresnel-Ringbreiten √(2|C′|) um die
+  Achse einer Kreisblende ist der Gitterfehler der harten Kante kohärent verstärkt: 3,1 % (FFT)
+  bzw. 6,0 % (SFT) bei N_F ≈ 25, 5,5 % bzw. 11 % bei N_F ≈ 100. Der Planer gibt die Zone als
+  `parameters["axis_zone_mm"]` mit Warnung aus; das Budget gilt außerhalb. Prototyp-Messung auf
+  der Achse (N_F ≈ 100, SFT): 69 %, 18 %, 10 % bei q = 10, 15, 20.
+- *Konstante des Kantenfehlers in 2D:* gemessen bis 0,35/q (Kreis) bzw. 0,26/q (Rechteck, T6),
+  das Paper nennt ≈ 0,1/q (1D). Der Planer rechnet mit 0,4/q.
+- *Fenster der SFT:* Mit demselben Gitter für Hin- und Rück-SFT gilt allein aus der
+  Chirp-Bedingung n ≈ π q²/m. Bei kleinen Aperturen ist deshalb die direkte FFT billiger; das
+  bestätigt die Aussage des Papers (SFT lohnt ab N_F ≳ 10²).
+
 ## Vektorisierte LPIA (Issue #21)
 
 `refract_batch`, `fresnel_coefficients_batch` und `fresnel_operator_batch` gegen die bisherigen
