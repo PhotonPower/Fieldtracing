@@ -14,10 +14,11 @@
 | `focus` | sphärische Austrittsphase, exakte Legendre-Transformation, Airy-Integral, Debye-Fokus per FFT (`debye_focus`, skalar und vektoriell) | Abschnitt 5.3, Gl. debye |
 | `lpia` | vektorielles Snellius-Gesetz, Fresnel-Koeffizienten, Operator T; Schritt durch gekrümmte Flächen mit Maschen-Jacobi (`trace_surface`, `mesh_jacobian`, `interface_amplitude`) | Abschnitt 3.2, 3.5 |
 | `selection` | Kennzahlen w, F, Kantenverhältnis, Aufwand, Minimax-Krümmung für die SFT | Kapitel 7 |
+| `mesh` | Jacobi-Faktor aus unstrukturierten Strahlwolken: Delaunay-Triangulierung ohne Dreiecke über Obskurationen, Flächenverhältnis je Dreieck, Ableitungen per quadratischer Ausgleichsrechnung, Maslov-Index, Kaustik-Erkennung | Abschnitt 3.4, Gl. jacobian_amplitude, Erkenntnis „Nachbarschafts-Maschen“ |
 | `field` | `GridlessField` (Orts- und Frequenzbereich: Konstruktoren, Taylor-Phase, Residuumsinterpolation, Umtasten aufs Gitter mit Trägerphase, Adapter für Propagation und PFT) und `GriddedField` | Abschnitt 1.3, 7.2 |
 
 Abhängigkeiten nur in einer Richtung: `units`, `fourier` < `propagation` < alle übrigen;
-`selection` und `field` hängen von keinem anderen Baustein ab.
+`selection`, `mesh` und `field` hängen von keinem anderen Baustein ab.
 
 ## Entwurfsregeln
 

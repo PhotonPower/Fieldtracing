@@ -214,3 +214,37 @@ U·e^(iψ) über 50 %.
 
 PFT hin und zurück über die Feldobjekte ist exakt; geometrische Propagation einer sphärischen
 Welle um 10 mm liefert die Hesse-Matrix der Welle mit f = 15 mm (H₂ = H₁·(∂ρ₂/∂ρ₁)⁻¹).
+
+## Jacobi-Faktor aus unstrukturierten Strahlwolken (Issue #18)
+
+Sollwert: analytisches J aus `semiclassical.propagate_2d` (über die analytische Hesse-Matrix,
+Gl. jacobian_relation), λ = 0,5 µm. Wolke: Gitter über ±2 mm mit zufälliger Verschiebung um
+±0,3 h je Punkt (Seed 7), Delaunay-Triangulierung, Randsplitter (Formgüte < 0,2) abgeschält.
+Maximaler relativer Fehler von J über **alle** Knoten einschließlich Rand:
+
+| f_x, f_y (mm) | d (mm) | μ | 41² Strahlen | 81² Strahlen | Verhältnis |
+| --- | --- | --- | --- | --- | --- |
+| 25, 25 | 10 | 0 | 3,0·10⁻⁵ | 8,6·10⁻⁶ | 3,5 |
+| 20, 40 (zwischen den Brennlinien) | 30 | 1 | 1,8·10⁻⁴ | 5,8·10⁻⁵ | 3,1 |
+| 20, 20 (hinter dem Punktfokus) | 40 | 2 | 1,4·10⁻⁴ | 4,1·10⁻⁵ | 3,5 |
+| 20, 40 (hinter beiden Brennlinien) | 60 | 2 | 1,8·10⁻⁴ | 5,8·10⁻⁵ | 3,1 |
+
+Zweite Ordnung in h (quadratische Ausgleichsrechnung über den Zwei-Ring der Maschennachbarn).
+Der Maslov-Index aus den Eigenwerten stimmt an allen Knoten. Das flächengewichtete Mittel der
+Dreiecks-Flächenverhältnisse an den Knoten ist nur etwa erster Ordnung (RMS-Fehler sinkt um den
+Faktor 2,3–2,5 je Halbierung von h). Ohne Abschälen der Randsplitter stagniert der Randfehler bei
+≈ 4·10⁻⁴, weil Splitter weit entfernte Randstrahlen koppeln.
+
+- **Gleichverteilte Zufallswolke** (Seed 3): 1,9·10⁻⁴ (400 Punkte), 6,8·10⁻⁵ (1600),
+  2,5·10⁻⁵ (6400); konvergent, ohne feste Ordnung (Poisson-Wolke).
+- **Regelmäßiges Gitter:** gegen `lpia.mesh_jacobian` bei quadratischer Abbildung bis auf
+  Rundung (< 10⁻¹²), allgemein Abweichung O(h²) (2,3·10⁻⁵ bei 21², 5,7·10⁻⁶ bei 41²).
+- **Affine Abbildung:** Dreiecksverhältnisse und Ableitungen exakt; gespiegelte Abbildung ergibt
+  negative Verhältnisse.
+- **Zentrale Obskuration** (Ringblende 0,6–2 mm): Delaunay allein füllt das Loch; mit
+  `max_edge = 2h` oder Gebietsprädikat liegt kein Dreieck darüber, die Fläche des Netzes bleibt
+  kleiner als die Ringfläche, J auf allen Knoten < 5·10⁻⁴ genau.
+- **Kaustik in der Zielebene** (konvergente Welle mit sphärischer Aberration, f = 20 mm,
+  d = 18 mm, ψ = −k(ρ²/(2f) + bρ⁴/4), b = 9,45·10⁻⁴ mm⁻²): J wechselt auf einem Kreis
+  ρ ≈ 1,35 mm das Vorzeichen. Markiert werden nur Knoten innerhalb 2h vom Kaustikkreis, jeder
+  Knoten mit falschem Vorzeichen ist markiert, an allen übrigen stimmt μ (0 innen, 1 außen).

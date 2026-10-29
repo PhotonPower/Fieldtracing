@@ -44,6 +44,11 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   Umtasten mit analytischer Trägerphase, Adapter für Propagation und PFT;
   `GeometricResult.curvature` liefert die neue Hesse-Matrix (#17).
 
+- `mesh.triangulate`, `mesh.triangle_area_ratio`, `mesh.fit_derivatives` und
+  `mesh.mesh_jacobian_cloud`: Jacobi-Faktor, Maslov-Index und Kaustik-Erkennung aus
+  unstrukturierten Strahlwolken (Delaunay, Obskurationen, quadratische Ausgleichsrechnung,
+  Fehler O(h²)) (#18).
+
 ### Geändert
 
 - Paper: Gültigkeitsgrenze der Debye-Näherung quantifiziert (≈ 1,5/N_F statt N_F ≲ 10),
