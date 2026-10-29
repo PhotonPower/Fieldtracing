@@ -579,7 +579,7 @@ LPIA & abhängig von Krümmungsradius$/\lambda$~\cite{vonpfeil2000} & $R_c/\lamb
 \addlinespace
 Sequenzielle Kette & Geisterbild\-amplitude $\sim|r_ir_j|$ (unvergütetes Glas: $|r|\approx0{,}2$, also $\approx0{,}04$) & Reflexionsgrade & nicht-sequenzielle Iteration\\
 \addlinespace
-Harte Kante auf Gitter & $\mathcal O(\Delta x)$, vgl.\ Tabelle in Abschnitt~\ref{sec:sft} & $\Delta x/w_c$ & Subpixel-Gewichtung, feineres Gitter\\
+Harte Kante auf Gitter & $\mathcal O(\Delta x)$, vgl.\ Tabelle in Abschnitt~\ref{sec:sft}; in 2D mit Subpixel-Gewichtung $\lesssim0{,}4/q$, $q=w_c/\Delta x$; auf der Achse rotationssymmetrischer Blenden (Kaustik der Kantenwelle) kohärent verstärkt & $\Delta x/w_c$ & Subpixel-Gewichtung, feineres Gitter; nahe der Achse Randintegral oder erfc-Lösung\\
 \addlinespace
 Interpolation Punktwolke $\to$ Gitter & Ordnung des Interpolationsverfahrens & Stützstellen\-abstand $/L_U$ & höhere Ordnung, dichtere Wolke\\
 \addlinespace
@@ -594,7 +594,7 @@ Aliasing der SFT-Transferfunktion & sprunghaft bei Verletzung & $L|c|\Delta x/(2
 Pro Raumrichtung gilt für ein Rechenfenster der Länge $L$ und eine Apertur der Halbbreite $a$:
 \begin{itemize}
     \item \emph{Direkte FFT:} $N_\text{FFT}\approx L\,|\grad\psi|_{\max}/\pi\approx|h|\,a\,L/\pi$ (Nyquist der Gesamtphase).
-    \item \emph{SFT:} $N_\text{SFT}\approx L/\Delta x$ mit $\Delta x=\min\big(w_c/q,\ \pi/\max|\grad\psi_\text{res}|\big)$. Dabei ist $w_c=\sqrt{2/|c|}$, und der Faktor $q$ legt die Genauigkeit fest; nach der Tabelle in Abschnitt~\ref{sec:sft} entspricht $q\approx5$ etwa $2\,\%$ und $q\approx20$ etwa $0{,}5\,\%$ Fehler bei harter Kante.
+    \item \emph{SFT:} $N_\text{SFT}\approx L/\Delta x$ mit $\Delta x=\min\big(w_c/q,\ \pi/\max|\grad\psi_\text{res}|\big)$. Dabei ist $w_c=\sqrt{2/|c|}$, und der Faktor $q$ legt die Genauigkeit fest; nach der Tabelle in Abschnitt~\ref{sec:sft} entspricht in 1D $q\approx5$ etwa $2\,\%$ und $q\approx20$ etwa $0{,}5\,\%$ Fehler bei harter Kante. In 2D wurden mit Subpixel-Gewichtung bis $0{,}35/q$ gemessen (gedrehtes Rechteck, Kreisblende), also etwa das Doppelte bis Dreifache. Wird dasselbe Gitter für Hin- und Rück-SFT verwendet, verlangen die Chirp-Bedingungen $L\ge2\pi/(|c|\Delta x)$ bzw.\ $L\ge2\pi/(|c|\,m\,\Delta x)$ mit dem Abbildungsmaßstab $m=1+z\,c/k_0$ der Rück-SFT; mit $\Delta x=w_c/q$ folgt allein daraus $N_\text{SFT}\gtrsim\pi q^2/m$ pro Richtung, unabhängig von Apertur und Brennweite. Bei kleinen Aperturen ist das die maßgebliche Grenze.
     \item \emph{PFT:} unabhängig von $\lambda$. Die Zahl der Stützstellen ist durch die Glattheit von $\psi$ und $\bm U$ bestimmt.
     \item \emph{FFT im Fokus:} $N\approx2\,\NA\,L_F/\lambda$ für ein Fokusfenster der Breite $L_F$. Ein feineres Ausgabegitter erhält man durch Nullauffüllung oder Chirp-z-Transformation~\cite{leutenegger2006}.
 \end{itemize}
@@ -635,7 +635,7 @@ kantennahe Zone ($\varepsilon=1\,\%$) & $d_e\lesssim40\,w\approx1{,}7\,$mm\\
     \item Die Fresnel-Ringe in der Zwischenebene haben eine Breite von etwa $\sqrt{2C'}\approx46\,\mu$m und werden vom Ausgabegitter ($\Delta\rho=C'\Delta k\approx3{,}4\,\mu$m) gut aufgelöst.
 \end{itemize}
 
-\paragraph{Fehlerbudget des Beispiels.} Im Fokus dominieren die Diskretisierung der $\kp$-Berandung und die Interpolation von $\bm U$ auf das $\kp$-Gitter; Debye- und PFT-Fehler sind bei $N_F\approx10^4$ klein. In der Zwischenebene dominiert der Diskretisierungsfehler der SFT an der harten Kante, mit $q=10$ im Bereich von etwa $1\,\%$.
+\paragraph{Fehlerbudget des Beispiels.} Im Fokus dominieren die Diskretisierung der $\kp$-Berandung und die Interpolation von $\bm U$ auf das $\kp$-Gitter; Debye- und PFT-Fehler sind bei $N_F\approx10^4$ klein. In der Zwischenebene dominiert der Diskretisierungsfehler der SFT an der harten Kante, mit $q=10$ im Bereich von $2$ bis $4\,\%$. Ausgenommen ist eine Zone von wenigen Fresnel-Ringbreiten $\sqrt{2C'}$ um die Achse: Dort treffen die Kantenwellen aller Randpunkte gleichphasig zusammen (Poisson-Fleck, eine Kaustik der Kantenwelle), und der Gitterfehler der Kante wird kohärent verstärkt; in einem verkleinerten System ($N_F\approx100$) wurden auf der Achse bei $q=10$, $15$, $20$ Fehler von $69$, $18$ und $10\,\%$ gemessen.
 
 \paragraph{Integrationstest.} Dasselbe System mit um den Faktor 10 verkleinerter Apertur ($N_F\approx144$) ist mit direkter Rayleigh-Sommerfeld-Integration berechenbar. Der Vergleich prüft die gesamte Kette einschließlich der Auswahlregeln aus Tabelle~\ref{tab:selection}.
 
