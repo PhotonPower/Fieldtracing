@@ -84,12 +84,18 @@ aus dem kompilierten System übernimmt.
 - **Python:** Bindungen über nanobind wie die übrigen Bibliotheken; die Python-API von
   Raytatouille bekommt ein Modul `raytatouille.field`.
 
+Der ausgearbeitete Vorschlag steht als ADR-Entwurf in `docs/rtt-port/adr-entwurf-rtt-field.md`
+(F5, #51); er weicht in einem Punkt von der Skizze oben ab: `rtt-field` braucht `rtt-analysis`
+nicht, weil der erste Integrationspunkt aus Strahlen rechnet.
+
 ## Offene Fragen für den Port
 
 1. ~~Exakte Umrechnung von weight und leistungsnormierter P in Feldamplituden auf einer Ebene~~:
    festgelegt und getestet in ADR 0004 (#23); Raytatouille braucht dafür keine Änderung.
-2. Nachbarschaft der Strahlen: reicht die Zellstruktur von `GridPupil`/`PointListPupil`, oder
-   braucht es eine Triangulierung (Randzellen, Obskurationen)?
+2. ~~Nachbarschaft der Strahlen: reicht die Zellstruktur von `GridPupil`/`PointListPupil`, oder
+   braucht es eine Triangulierung (Randzellen, Obskurationen)?~~ Triangulierung der Startpunkte
+   (#18): beliebige Abtastungen, Obskurationen, O(h²) auch am Rand.
 3. Bezugsebenen: Wie verhalten sich die PSF-Ebene von ADR 0032 (senkrecht zum Hauptstrahl) und die
    Fokusebene der Debye-Kette bei Feldpunkten außerhalb der Achse?
-4. Gehört die Wahl des Operators (Auswahlregeln) in die Bibliothek oder in eine Analyse-Option?
+4. ~~Gehört die Wahl des Operators (Auswahlregeln) in die Bibliothek oder in eine Analyse-Option?~~
+   Vorschlag im ADR-Entwurf, Punkt 8: Regeln und Plan in die Bibliothek, Erzwingen als Option.
