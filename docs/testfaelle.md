@@ -283,3 +283,50 @@ Beim letzten Vergleich fiel ein Fehler in `propagate_2d` auf (aus #17): die Stra
 transponiert, die neue Hesse-Matrix daher für nicht vertauschende H und Strahlrichtungen um
 ≈ 4·10⁻⁴ falsch (J und μ waren richtig). Behoben, Regressionstest mit zentralen Differenzen in
 `test_semiclassical.py`.
+
+## Planer und Integrationstest Linse → Blende → Ebene (Issue #20)
+
+**Entscheidungstabelle** (`select_method`, ε = 2 %): je Zeile von Tabelle tab:selection ein Fall,
+dazu Totalausfall der LPIA (R ~ λ), „FFT billiger als SFT“ (Aufwand) und F zwischen 1 und 1/ε.
+Mit echten Feldern: Kugelwelle ohne Blende → geometrisch (Ergebnis identisch mit
+`geometric_propagation`), mit Blende → Gitterverfahren mit Achszone, Fokus → Debye bzw.
+Rayleigh-Sommerfeld, Zylinderwelle → gemischte Karte (noch ohne Operatoren), kollimiert mit
+Blende → FFT.
+
+**System:** kollimierter, x-polarisierter Strahl (λ = 0,5 µm) → Kugelfläche R = 5 mm Luft/Glas
+(n = 1,5, LPIA auf einer Wolke mit 61² Strahlen) → Kreisblende Radius a in der Austrittsebene →
+Ebene auf halbem Weg zum paraxialen Fokus bzw. Fokusebene (f ≈ 14,9 mm).
+
+**Referenz** (unabhängig von allen Kettenbausteinen): Austrittsfeld aus meridionaler
+Strahlrechnung in geschlossener Form (Snellius, Convention A, Gl. interface_amplitude mit
+radialem Jacobi-Faktor, Polarisation analytisch: E = e^{iψ}(−A_s sin φ e_φ + A_p cos φ
+(cos θ e_r + sin θ e_z))), dann Rayleigh-Sommerfeld-Integral über die Kreisscheibe (Gauß-Legendre
+in r mit exakter Kante, Trapez in φ). Knotenzahlen aus der größten Phasenänderung; bei 1,4-facher
+Knotenzahl ändert sich nichts (< 10⁻¹⁰).
+
+Fehler relativ zum größten |E| der Proben, außerhalb der Achszone (siehe unten):
+
+| System | Ebene | ε | Planer wählt | q | gemessen | Budget |
+| --- | --- | --- | --- | --- | --- | --- |
+| a = 0,354 mm (N_F ≈ 25) | f/2 | 4 % | FFT (502 statt 692 Punkte) | 10 | 1,2 % | 4,0 % |
+| a = 0,354 mm | f/2, SFT erzwungen | 4 % | SFT | 10 | 0,89 % | 4,0 % |
+| a = 0,707 mm (N_F ≈ 100, `slow`) | f/2 | 2 % | FFT (2010 statt 2772) | 20 | 1,3 % | 2,0 % |
+| a = 0,707 mm (`slow`) | f/2, SFT erzwungen | 2 % | SFT | 20 | 1,1 % | 2,0 % |
+| a = 0,354 mm | Fokus | 4 % | Rayleigh-Sommerfeld (1,5/N_F = 6 % > ε) | | 4·10⁻⁵ | 4,0 % |
+| a = 0,707 mm | Fokus | 2 % | Debye (1,5/N_F = 1,5 %) | | 0,30 % | 1,5 % |
+
+Das Budget ist bei Rayleigh-Sommerfeld im Fokus sehr großzügig: Der Kantenterm 0,4/q ist für das
+Fokusfeld nicht maßgeblich.
+
+**Abweichungen zwischen Budget und Messung** (Issue #31, Label `paper`):
+
+- *Achs-Kaustik der Kantenwelle:* Innerhalb von etwa drei Fresnel-Ringbreiten √(2|C′|) um die
+  Achse einer Kreisblende ist der Gitterfehler der harten Kante kohärent verstärkt: 3,1 % (FFT)
+  bzw. 6,0 % (SFT) bei N_F ≈ 25, 5,5 % bzw. 11 % bei N_F ≈ 100. Der Planer gibt die Zone als
+  `parameters["axis_zone_mm"]` mit Warnung aus; das Budget gilt außerhalb. Prototyp-Messung auf
+  der Achse (N_F ≈ 100, SFT): 69 %, 18 %, 10 % bei q = 10, 15, 20.
+- *Konstante des Kantenfehlers in 2D:* gemessen bis 0,35/q (Kreis) bzw. 0,26/q (Rechteck, T6),
+  das Paper nennt ≈ 0,1/q (1D). Der Planer rechnet mit 0,4/q.
+- *Fenster der SFT:* Mit demselben Gitter für Hin- und Rück-SFT gilt allein aus der
+  Chirp-Bedingung n ≈ π q²/m. Bei kleinen Aperturen ist deshalb die direkte FFT billiger; das
+  bestätigt die Aussage des Papers (SFT lohnt ab N_F ≳ 10²).
