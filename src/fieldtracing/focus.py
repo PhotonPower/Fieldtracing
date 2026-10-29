@@ -6,10 +6,15 @@ For the exactly spherical exit phase ψ = -k(sqrt(f² + ρ²) - f) the Legendre 
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
+
 import numpy as np
 from scipy.special import j1
 
-from fieldtracing._types import FloatArray
+from fieldtracing._types import ComplexArray, FloatArray
+from fieldtracing.fourier import centered_grid, ift
+from fieldtracing.sft import circular_aperture_weights
 
 
 def spherical_phase(rho: FloatArray, f: float, k: float) -> FloatArray:
@@ -46,3 +51,85 @@ def airy_integral(rho: FloatArray, k_max: float) -> FloatArray:
     out[small] = np.pi * k_max * k_max
     out[~small] = 2.0 * np.pi * k_max * k_max * j1(arg[~small]) / arg[~small]
     return out
+
+
+@dataclass(frozen=True)
+class FocalField:
+    """Field in a plane z = f + defocus behind the exit plane (paper, eq. debye).
+
+    The physical field is values·exp(i·phase_offset); the constant phase k f is kept apart
+    (ADR 0003).
+
+    Attributes:
+        x: centred coordinates of the output grid in mm (same for x and y).
+        values: (M, M) or (M, M, 3) complex field, rows y, columns x.
+        phase_offset: constant phase k·f in rad.
+    """
+
+    x: FloatArray
+    values: ComplexArray
+    phase_offset: float
+
+
+def debye_focus(
+    residual: Callable[[FloatArray, FloatArray], ComplexArray],
+    f: float,
+    k: float,
+    sin_max: float,
+    n: int = 256,
+    pad: int = 4,
+    defocus: float = 0.0,
+    subpixel: bool = True,
+    oversample: int = 8,
+) -> FocalField:
+    """Focal field of a converging wave by the chain PFT → angular spectrum → FFT (eq. debye).
+
+    The exit-plane field is residual(ρ)·exp(iψ) with the exactly spherical phase
+    ψ = -k(sqrt(f² + ρ²) - f) (eq. lens_exit_field without aberration; aberrations belong to
+    the residual). Evaluated is
+
+        E(ρ, f + δz) = -(i f e^{ikf}/(2π k)) ∬_{|k⊥| ≤ k sin_max} U(ρ_s(k⊥))/cos²θ
+                        · exp(i(k⊥·ρ + k_z δz)) d²k⊥,   ρ_s = -f k⊥/k_z.
+
+    Args:
+        residual: U(x, y) on the exit plane (mm in, complex out); returns shape (...,) for a
+            scalar or (..., 3) for a vector field.
+        f: distance exit plane → focus in mm (> 0).
+        k: wavenumber of the image-space medium in 1/mm.
+        sin_max: sine of the marginal-ray angle, NA/n (0 < sin_max < 1).
+        n: samples across the k-domain diameter (the focal window is n·λ/(2 sin_max)).
+        pad: zero-padding factor; the output grid step is 2π/(n·pad·dk).
+        defocus: δz in mm, positive away from the lens.
+        subpixel: weight boundary cells by their covered fraction (recommended).
+        oversample: sub-samples per cell and axis for the boundary weights.
+
+    Returns:
+        FocalField on an (n·pad)² grid. Validity: Fresnel number of the aperture ≫ 1
+        (paper, section 5.3; Wolf & Li 1981).
+    """
+    if not 0.0 < sin_max < 1.0:
+        raise ValueError("sin_max must lie in (0, 1)")
+    if f <= 0.0 or n < 8 or pad < 1:
+        raise ValueError("need f > 0, n ≥ 8 and pad ≥ 1")
+    k_max = k * sin_max
+    dk = 2.0 * k_max / (n - 2)
+    kx = centered_grid(n, dk)
+    weights = (
+        circular_aperture_weights(kx, kx, k_max, oversample)
+        if subpixel
+        else (kx[None, :] ** 2 + kx[:, None] ** 2 <= k_max * k_max).astype(np.float64)
+    )
+    k_perp_sq = np.minimum(kx[None, :] ** 2 + kx[:, None] ** 2, (k * (1.0 + sin_max) / 2.0) ** 2)
+    kz = np.sqrt(k * k - k_perp_sq)
+    cos_sq = (kz / k) ** 2
+    u = residual(-f * kx[None, :] / kz, -f * kx[:, None] / kz)
+    factor = weights / cos_sq * np.exp(1j * kz * defocus)
+    integrand = u * (factor[..., None] if np.ndim(u) == 3 else factor)
+
+    m = n * pad
+    padded = np.zeros((m, m) + np.shape(integrand)[2:], dtype=np.complex128)
+    lo = m // 2 - n // 2
+    padded[lo : lo + n, lo : lo + n] = integrand
+    field = ift(padded, dk, axes=(0, 1))
+    values = -1j * f / (2.0 * np.pi * k) * field
+    return FocalField(centered_grid(m, 2.0 * np.pi / (m * dk)), np.asarray(values), k * f)
