@@ -34,9 +34,9 @@ Leitlinien, die sich aus dem Ziel ergeben:
 | --- | --- | --- |
 | **F0 Fundament** ✅ | Repository, Doku, CI, Konventionen, ADR 0001–0003; 1D-Bausteine; Testfälle T1–T3, T5–T8 | CI grün; Fehler der SFT reproduziert die Tabelle im Paper; PFT und Jacobi-Gesetz konvergieren mit O(1/k) |
 | **F1 Bausteine 2D** ✅ | SFT für allgemeines C, inverse PFT/SFT, Minimax-Krümmung, 2D-Kanten (Randintegral, kritische Punkte 2. Art), Debye-Fokus per FFT, LPIA an gekrümmter Fläche mit Strahlnetz | T1–T8 vollständig in 2D; T4 (Debye gegen Rayleigh-Sommerfeld für N_F von 3 bis 10³) |
-| **F2 Hybride Darstellung und Verkettung** | `GridlessField`/`GriddedField` mit Verhalten, Übergänge Punktwolke ↔ Gitter, Jacobi-Faktor aus Maschenflächen, Auswahlregeln als Planer, Operatorkette | Kette Linse → Blende → Ebene stimmt mit dem Winkelspektrum innerhalb der Toleranzen aus Tabelle 7.3 |
+| **F2 Hybride Darstellung und Verkettung** (#17–#21) | `GridlessField`/`GriddedField` mit Verhalten, Übergänge Punktwolke ↔ Gitter, Jacobi-Faktor aus Maschenflächen, Auswahlregeln als Planer, Operatorkette | Kette Linse → Blende → Ebene stimmt mit dem Winkelspektrum innerhalb der Toleranzen aus Tabelle 7.3 |
 | **F3 Integrationstest Kapitel 7.5** | Beispiel D = 25 mm, NA 0,5: Fokus und Zwischenebene; verkleinertes System gegen direkte Rayleigh-Sommerfeld-Rechnung; vektoriell mit Richards-Wolf | Abweichungen und Punktzahlen dokumentiert; Paper bei Abweichungen korrigiert |
-| **F4 Brücke zu Raytatouille (lesend)** | Adapter: Strahldaten aus der Python-API von Raytatouille → `GridlessField` (Phase aus OPL, Amplitude aus weight und Maschen, Polarisation aus PRT) | Debye-Fokus aus Raytatouille-Strahlen = FFT-PSF von Raytatouille bei kleiner NA; Abweichungen bei hoher NA erklärt (√cos, Vektor) |
+| **F4 Brücke zu Raytatouille (lesend)** (#22–#25) | Adapter: Strahldaten aus der Python-API von Raytatouille → `GridlessField` (Phase aus OPL, Amplitude aus weight und Maschen, Polarisation aus PRT) | Debye-Fokus aus Raytatouille-Strahlen = FFT-PSF von Raytatouille bei kleiner NA; Abweichungen bei hoher NA erklärt (√cos, Vektor) |
 | **F5 Integrationsvorschlag** | ADR-Entwurf `rtt-field`, API-Skizze, Sollwertdateien für den Port, Issue-Entwürfe im Format von Raytatouille | Freigabe durch den Maintainer |
 | F6 Port (in Raytatouille) | C++-Bibliothek nach Freigabe, nach den Regeln von Raytatouille | dort |
 
@@ -55,6 +55,33 @@ Je ein Issue pro Auftrag für einen Agenten, Meilenstein „F1 Bausteine 2D“ a
 | F1-5 | #5 | `edge.py` | 2D-Randintegral (Gl. bdw), kritische Punkte 2. Art, Ecken | Kreisblende und Rechteckblende gegen 2D-Quadratur; Ordnung k^−1/2 bzw. k^−1 |
 | F1-6 | #6 | `lpia.py` | LPIA-Schritt an einer Sphäre mit Strahlnetz, Energiebilanz nach Gl. interface_amplitude | Ebene Welle durch eine Planfläche = Fresnel; Fluss bleibt mit R + T = 1 erhalten |
 | F1-7 | #7 | `semiclassical.py` | Maslov-Index am Punktfokus (μ = 2) und an Brennlinien in 2D | 2D-Winkelspektrum: Phasensprung −π bzw. −π/2 |
+
+## F2 im Detail
+
+Meilenstein „F2 Hybride Darstellung und Verkettung“ auf GitHub.
+
+| Nr. | Issue | Inhalt | Abnahme |
+| --- | --- | --- | --- |
+| F2-1 | #17 | `GridlessField`/`GriddedField` mit Verhalten: Konstruktoren, Phase per Taylor, Umtasten nur des Residuums | Ordnungen der Phasen- und Residuumsinterpolation; Gegenprobe zu ADR 0003 |
+| F2-2 | #18 | Jacobi-Faktor aus unstrukturierten Wolken (Delaunay), Kaustik-Erkennung | analytisches J, O(h²), Obskuration, Maslov-Index |
+| F2-3 | #19 | einheitliche Operatoren mit Protokoll (Gl. system_chain, Tabelle 7.2) | Regression gegen F1, exakte Operatoren invertierbar |
+| F2-4 | #20 | Planer nach Tabelle 7.1, Integrationstest Linse → Blende → Ebene | Abweichung innerhalb des vorhergesagten Fehlerbudgets |
+| F2-5 | #21 | Strahlschleife in `lpia` vektorisieren | Tests unverändert, ≥ 50-fach schneller |
+
+Reihenfolge: #17, dann #18 und #19 parallel, dann #20. #21 ist unabhängig.
+
+## F4 im Detail
+
+Meilenstein „F4 Brücke zu Raytatouille (lesend)“ auf GitHub; alle Issues mit Label `rtt`.
+
+| Nr. | Issue | Inhalt | Abnahme |
+| --- | --- | --- | --- |
+| F4-1 | #22 | Raytatouille als optionale Abhängigkeit, Marker `rtt`, Workflow mit Build | Rauchtest im Workflow, Standard-CI unverändert |
+| F4-2 | #23 | Umrechnung leistungsnormierte PRT-Matrix und Gewicht → Feldamplitude (ADR) | einzelne Grenzfläche gegen `lpia.fresnel_operator`, Energie gegen `polar.transmission` |
+| F4-3 | #24 | Adapter Raytatouille-Strahlen → `GridlessField` | Phase gegen `opd_map`, Nachrechnung mit `lpia.trace_surface` |
+| F4-4 | #25 | Debye-Fokus aus Raytatouille-Strahlen gegen deren FFT-PSF | Bericht `docs/vergleich-psf.md`, Übereinstimmung bei kleiner NA |
+
+Reihenfolge: #22 → #23 → #24 (braucht auch #17 und #18) → #25.
 
 ## Entscheidungen
 
