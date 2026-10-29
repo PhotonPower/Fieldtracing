@@ -47,7 +47,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.spatial import cKDTree
 
-from fieldtracing._types import ComplexArray, FloatArray
+from fieldtracing._types import ComplexArray, FloatArray, IntArray
 from fieldtracing.field import GriddedField, GridlessField
 from fieldtracing.focus import debye_focus
 from fieldtracing.fourier import centered_grid, frequency_step, ft, ift
@@ -850,14 +850,54 @@ def _interpolation_error(g: GridlessField, mask: NDArray[np.bool_]) -> float:
     return float(np.max(np.abs(lin - cub))) / scale if scale > 0.0 else 0.0
 
 
+def _phase_taylor_error(g: GridlessField, mask: NDArray[np.bool_]) -> float:
+    """Error of the second-order Taylor phase (`GridlessField.phase_at`) in rad.
+
+    At the midpoint of each sample and its nearest neighbour the expansions about both samples
+    are compared; their difference is of the order of the third-order remainder.
+    """
+    pts = g.points[mask]
+    if len(pts) < 2:
+        return 0.0
+    i = np.nonzero(mask)[0]
+    _, idx = cKDTree(g.points).query(pts, k=2)
+    j = idx[:, 1]
+    q = 0.5 * (pts + g.points[j])
+
+    def taylor(n: IntArray) -> FloatArray:
+        d = q - g.points[n]
+        return np.asarray(
+            g.phase[n]
+            + np.sum(g.gradient[n] * d, axis=1)
+            + 0.5 * np.einsum("ni,nij,nj->n", d, g.hessian[n], d)
+        )
+
+    return float(np.max(np.abs(taylor(i) - taylor(j))))
+
+
+def airy_alias_error(period: float, window: float, k: float, sin_max: float) -> float:
+    """Amplitude of the periodic copies of a focal spot at the edge of the target window.
+
+    The FFT of the Debye integral is periodic with `period` (mm); a point at |x| ≤ window/2 sees
+    the neighbouring copy at distance period - window/2. Envelope of 2J₁(x)/x:
+    (8/π)^(1/2)·x^(-3/2), x = k·sin_max·r (aberration-free spot; a bound for well-corrected
+    systems).
+    """
+    r = period - 0.5 * window
+    if r <= 0.0:
+        return math.inf
+    return float(math.sqrt(8.0 / math.pi) * (k * sin_max * r) ** -1.5)
+
+
 def plan_propagation(
     f: GridlessField | GriddedField,
     distance: float,
     stop: Aperture | None = None,
     tolerance: float = 0.02,
     length_u: float | None = None,
-    focus_samples: int = 64,
+    focus_samples: int | None = None,
     method: str | None = None,
+    focus_window: float | None = None,
 ) -> Plan:
     """Plan stop + propagation of a space cloud to the plane at `distance` mm (section 7).
 
@@ -880,7 +920,10 @@ def plan_propagation(
         stop: aperture in the plane of the field (optional).
         tolerance: ε of the selection rules.
         length_u: variation length L_U of U in mm (default: stop radius or cloud radius).
-        focus_samples: samples across the k-disc (Debye) or per direction of the focal grid.
+        focus_samples: samples across the k-disc (Debye) or per direction of the focal grid;
+            default: from `focus_window` so that the periodic copies stay below ε/10.
+        focus_window: full width of the region of interest in the target plane (mm; default
+            ten Airy diameters, 12.2 λ/sin θ).
         method: force a method instead of the selection rules (for comparisons).
     """
     g = _cloud(f, "space", "plan_propagation")
@@ -922,11 +965,12 @@ def plan_propagation(
     if method is not None:
         chosen, reason = method, f"forced (rules: {chosen}; {reason})"
     interp = _interpolation_error(g, lit)
+    taylor = _phase_taylor_error(g, lit)
     stop_ops: tuple[Operator, ...] = () if stop is None else (_bind(aperture, stop=stop),)
     edge_term = grid_edge_error(q) if stop is not None else 0.0
     notes: list[str] = []
     params: dict[str, float] = {"length_u_mm": l_u, "tolerance": tolerance}
-    budget: dict[str, float] = {"interpolation": interp}
+    budget: dict[str, float] = {"interpolation": interp, "phase_taylor": taylor}
     ops: tuple[Operator, ...] = ()
     if chosen == "geometric":
         budget = {"stationary_phase": 1.0 / f_min, "edge_wave": edge}
@@ -954,8 +998,25 @@ def plan_propagation(
         budget["hard_edge_grid"] = edge_term
     elif chosen == "debye":
         sin_max = a / math.hypot(a, distance)
-        ops = (_bind(debye, distance=distance, sin_max=sin_max, n=focus_samples),)
-        budget.update({"debye": debye_error(s.fresnel_number), "k_boundary": 0.02 / focus_samples})
+        lam = 2.0 * math.pi / g.k
+        window = 12.2 * lam / sin_max if focus_window is None else focus_window
+        n_debye = focus_samples
+        if n_debye is None:
+            # period n·λ/(2 sin θ) (debye_focus) large enough for aliases below ε/10
+            period = 0.5 * window
+            while airy_alias_error(period, window, g.k, sin_max) > 0.1 * tolerance:
+                period *= 1.25
+            n_debye = max(32, _even(2.0 * sin_max * period / lam))
+        period = n_debye * lam / (2.0 * sin_max)
+        ops = (_bind(debye, distance=distance, sin_max=sin_max, n=n_debye),)
+        budget.update(
+            {
+                "debye": debye_error(s.fresnel_number),
+                "k_boundary": 0.02 / n_debye,
+                "aliasing": airy_alias_error(period, window, g.k, sin_max),
+            }
+        )
+        params.update({"samples": float(n_debye), "period_mm": period, "window_mm": window})
     elif chosen == "rayleigh_sommerfeld":
         step = fft_grid["step_mm"]
         n = _even(1.1 * window / step)
@@ -964,7 +1025,9 @@ def plan_propagation(
         ops = (
             _bind(resample, n=n, step=step),
             *stop_ops,
-            _bind(rayleigh_sommerfeld, distance=distance, n_out=focus_samples, step_out=step_out),
+            _bind(
+                rayleigh_sommerfeld, distance=distance, n_out=focus_samples or 64, step_out=step_out
+            ),
         )
         params.update({"step_mm": step, "samples": float(n), "step_out_mm": step_out})
         budget["hard_edge_grid"] = edge_term
