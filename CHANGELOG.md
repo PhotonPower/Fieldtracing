@@ -49,6 +49,14 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   unstrukturierten Strahlwolken (Delaunay, Obskurationen, quadratische Ausgleichsrechnung,
   Fehler O(h²)) (#18).
 
+### Behoben
+
+- `semiclassical.propagate_2d`: Die Strahlabbildung ∂ρ₂/∂ρ₁ wurde transponiert gebildet
+  (H·∂(p/k_z)/∂p statt ∂(p/k_z)/∂p·H). J und μ blieben richtig, die neue Hesse-Matrix aus #17
+  aber nicht, sobald H und die Strahlrichtungen nicht vertauschen (gekippte astigmatische Phase,
+  relativer Fehler ≈ 4·10⁻⁴); sphärische Wellen waren nicht betroffen. Gefunden beim Vergleich mit
+  der Maschen-Jacobi-Matrix in #19, Regressionstest mit zentralen Differenzen.
+
 ### Geändert
 
 - Paper: Gültigkeitsgrenze der Debye-Näherung quantifiziert (≈ 1,5/N_F statt N_F ≲ 10),
