@@ -35,8 +35,8 @@ Leitlinien, die sich aus dem Ziel ergeben:
 | **F0 Fundament** ✅ | Repository, Doku, CI, Konventionen, ADR 0001–0003; 1D-Bausteine; Testfälle T1–T3, T5–T8 | CI grün; Fehler der SFT reproduziert die Tabelle im Paper; PFT und Jacobi-Gesetz konvergieren mit O(1/k) |
 | **F1 Bausteine 2D** ✅ | SFT für allgemeines C, inverse PFT/SFT, Minimax-Krümmung, 2D-Kanten (Randintegral, kritische Punkte 2. Art), Debye-Fokus per FFT, LPIA an gekrümmter Fläche mit Strahlnetz | T1–T8 vollständig in 2D; T4 (Debye gegen Rayleigh-Sommerfeld für N_F von 3 bis 10³) |
 | **F2 Hybride Darstellung und Verkettung** (#17–#21) ✅ | `GridlessField`/`GriddedField` mit Verhalten, Übergänge Punktwolke ↔ Gitter, Jacobi-Faktor aus Maschenflächen, Auswahlregeln als Planer, Operatorkette | Kette Linse → Blende → Ebene stimmt mit dem Winkelspektrum innerhalb der Toleranzen aus Tabelle 7.3 |
-| **F3 Integrationstest Kapitel 7.5** | Beispiel D = 25 mm, NA 0,5: Fokus und Zwischenebene; verkleinertes System gegen direkte Rayleigh-Sommerfeld-Rechnung; vektoriell mit Richards-Wolf | Abweichungen und Punktzahlen dokumentiert; Paper bei Abweichungen korrigiert |
-| **F4 Brücke zu Raytatouille (lesend)** (#22–#25) | Adapter: Strahldaten aus der Python-API von Raytatouille → `GridlessField` (Phase aus OPL, Amplitude aus weight und Maschen, Polarisation aus PRT) | Debye-Fokus aus Raytatouille-Strahlen = FFT-PSF von Raytatouille bei kleiner NA; Abweichungen bei hoher NA erklärt (√cos, Vektor) |
+| **F3 Integrationstest Kapitel 7.5** (#39–#43) | Beispiel D = 25 mm, NA 0,5: Fokus und Zwischenebene; verkleinertes System gegen direkte Rayleigh-Sommerfeld-Rechnung; vektoriell mit Richards-Wolf | Abweichungen und Punktzahlen dokumentiert; Paper bei Abweichungen korrigiert |
+| **F4 Brücke zu Raytatouille (lesend)** (#22–#25) ✅ | Adapter: Strahldaten aus der Python-API von Raytatouille → `GridlessField` (Phase aus OPL, Amplitude aus weight und Maschen, Polarisation aus PRT) | Debye-Fokus aus Raytatouille-Strahlen = FFT-PSF von Raytatouille bei kleiner NA; Abweichungen bei hoher NA erklärt (√cos, Vektor) |
 | **F5 Integrationsvorschlag** | ADR-Entwurf `rtt-field`, API-Skizze, Sollwertdateien für den Port, Issue-Entwürfe im Format von Raytatouille | Freigabe durch den Maintainer |
 | F6 Port (in Raytatouille) | C++-Bibliothek nach Freigabe, nach den Regeln von Raytatouille | dort |
 
@@ -75,6 +75,20 @@ Rayleigh-Sommerfeld-Quadratur innerhalb des vom Planer vorhergesagten Budgets (W
 `docs/testfaelle.md`), ausgenommen eine schmale Zone um die Achse der Kreisblende (Kaustik der
 Kantenwelle); die Abweichungen zum Paper stehen in #31.
 
+## F3 im Detail
+
+Meilenstein „F3 Integrationstest Kapitel 7.5“ auf GitHub.
+
+| Nr. | Issue | Inhalt | Abnahme |
+| --- | --- | --- | --- |
+| F3-1 | #39 | aplanatische Linse als `GridlessField`, Richards-Wolf als Referenzfunktion | Debye gegen Richards-Wolf, Energie |
+| F3-2 | #40 | Fokus des großen Systems (D = 25 mm, NA 0,5) | gegen Richards-Wolf im Budget; Punktzahlen, Laufzeit |
+| F3-3 | #41 | Zwischenebene z = f/2 des großen Systems | Planer-Wahl, Gitter, Speicher gegen das Paper |
+| F3-4 | #42 | verkleinertes System gegen direkte Rayleigh-Sommerfeld-Rechnung | im Budget außerhalb der Achszone |
+| F3-5 | #43 | Paper Abschnitt 7.5 abgleichen | Werte mit Verweis auf `docs/beispiel-7-5.md` |
+
+Reihenfolge: #39, dann #40, #41 und #42 (unabhängig voneinander), zuletzt #43.
+
 ## F4 im Detail
 
 Meilenstein „F4 Brücke zu Raytatouille (lesend)“ auf GitHub; alle Issues mit Label `rtt`.
@@ -87,6 +101,9 @@ Meilenstein „F4 Brücke zu Raytatouille (lesend)“ auf GitHub; alle Issues mi
 | F4-4 | #25 | Debye-Fokus aus Raytatouille-Strahlen gegen deren FFT-PSF | Bericht `docs/vergleich-psf.md`, Übereinstimmung bei kleiner NA |
 
 Reihenfolge: #22 → #23 → #24 (braucht auch #17 und #18) → #25.
+
+Abgeschlossen am 2026-10-29: Brücke über ADR 0004 (`rtt_bridge`), Vergleich der PSF in
+`docs/vergleich-psf.md`; Issue-Entwurf für Raytatouille in `docs/rtt-entwurf-psf-hohe-na.md`.
 
 ## Entscheidungen
 
