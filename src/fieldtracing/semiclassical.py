@@ -29,6 +29,8 @@ class GeometricResult:
         phase: ψ2 in rad.
         jacobian: J = det ∂ρ2/∂ρ1 (dimensionless, signed).
         maslov: μ, number of caustics crossed (0, 1 or 2).
+        curvature: new ψ'' (1D) or Hessian (N, 2, 2) of ψ₂ at the landing points; the transverse
+            wave vector is conserved along a ray, so H₂ = H₁·(∂ρ₂/∂ρ₁)⁻¹.
     """
 
     points: FloatArray
@@ -36,6 +38,7 @@ class GeometricResult:
     phase: FloatArray
     jacobian: FloatArray
     maslov: IntArray
+    curvature: FloatArray | None = None
 
 
 def _kz(p_sq: FloatArray, k: float) -> FloatArray:
@@ -66,7 +69,9 @@ def propagate_1d(
     maslov = (jacobian < 0.0).astype(np.int64)
     new_phase = phase + k * k * d / kz
     new_amp = amplitude / np.sqrt(np.abs(jacobian)) * np.exp(-0.5j * np.pi * maslov)
-    return GeometricResult(points, np.asarray(new_amp), new_phase, jacobian, maslov)
+    return GeometricResult(
+        points, np.asarray(new_amp), new_phase, jacobian, maslov, np.asarray(curvature / jacobian)
+    )
 
 
 def propagate_2d(
@@ -102,4 +107,5 @@ def propagate_2d(
     factor = np.exp(-0.5j * np.pi * maslov) / np.sqrt(np.abs(jacobian))
     new_amp = amplitude * (factor[:, None] if np.ndim(amplitude) == 2 else factor)
     new_phase = phase + k * k * d / kz
-    return GeometricResult(landing, np.asarray(new_amp), new_phase, jacobian, maslov)
+    new_hessian = np.einsum("nij,njk->nik", hessian, np.linalg.inv(mapping))
+    return GeometricResult(landing, np.asarray(new_amp), new_phase, jacobian, maslov, new_hessian)
