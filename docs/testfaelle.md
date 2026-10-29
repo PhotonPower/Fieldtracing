@@ -420,3 +420,10 @@ Bericht mit Bild: `docs/vergleich-psf.md`.
 Bericht: `docs/beispiel-7-5.md`. Kennzahlen des Planers wie im Paper (h, w, N_F, F_a, kantennahe
 Zone); Debye-Kette mit 19 441 Strahlen und n = 78 gegen `focus.richards_wolf` im Fenster
 L_F = 20 µm: 6,5·10⁻⁴ relativ zum Maximum, Budget 5,4·10⁻³.
+
+## Beispiel 7.5: verkleinertes System gegen Rayleigh-Sommerfeld (Issue #42)
+
+Aplanatische Linse NA 0,5, Blende a = 0,1 mm (N_F = 115) und 0,2 mm (N_F = 231, `slow`). Fokus
+(Debye): 0,28 % bzw. 0,15 % bei Budget 1,7 % bzw. 0,85 %. Ebene f/2 (SFT, `slow`): 2,9 % bzw.
+≈ 0,4 % außerhalb der Achszone bei Budget 4 % bzw. 2 %, in der Achszone 6,0 % bzw. ≈ 2,5 %.
+Tabelle und Einordnung in `docs/beispiel-7-5.md`.
