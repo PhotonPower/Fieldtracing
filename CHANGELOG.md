@@ -106,6 +106,10 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   der Apertur (`experiments/beispiel_7_5_zwischenebene.py`), Vergleich mit der Geometrie;
   `plan_propagation` gibt für die SFT Krümmung, Restgradient und Speicherbedarf aus.
 
+- Sollwertdateien für den Port (#50): `fieldtracing.results` (Kodierung nach Raytatouilles
+  ADR 0023, Typ-Vorschlag `FieldReference`), `tools/reference_cases.py`,
+  `tools/export_reference.py`, 12 Dateien unter `reference/field/`, Aktualitätstest.
+
 ### Geändert
 
 - Paper, Abschnitt 7.5 (#43): periodische Kopien der Fokus-FFT (N ≈ 80 statt 40 für 10⁻³),

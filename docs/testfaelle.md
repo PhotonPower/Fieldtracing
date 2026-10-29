@@ -434,3 +434,10 @@ Plan gegen Paper: c = −521,0 mm⁻², Restgradient 228,4 mm⁻¹ (Paper 230), 
 Punkte je Richtung (Fenster 1,3 × 25 mm statt 30 mm), 1,31 GB je (n, n, 3)-Feld. Rechnung für
 a = 2,5 mm (`slow`): Intensität gegen geometrische Propagation abseits von Kanten- und Achszone
 1,5·10⁻³. Skalierung und Laufzeiten in `docs/beispiel-7-5.md`.
+
+## Sollwertdateien für den Port (Issue #50)
+
+`reference/field/*.result.json` (12 Fälle, Übersicht in `reference/README.md`): jede Datei wird
+im Test neu gerechnet und verglichen (`expected`, Toleranz je Fall), die unabhängigen Werte
+(`reference`) halten ihre physikalische Toleranz, die Kodierung ist bitgleich umkehrbar
+(−0,0, NaN, ±∞, uint8, komplex) und mit Marker `rtt` identisch zu Raytatouilles `encode_json`.

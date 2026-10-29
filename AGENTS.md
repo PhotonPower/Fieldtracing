@@ -24,6 +24,10 @@ Tests gegen Raytatouille tragen den Marker `rtt`; ohne installiertes Paket `rayt
 werden sie übersprungen (Installation und Commit-Pin: `docs/integration-raytatouille.md`,
 `rtt-commit.txt`).
 
+Sollwertdateien für den Port liegen unter `reference/field/` (`reference/README.md`). Wer einen
+Baustein mit Sollwertdatei ändert, schreibt sie mit `python tools/export_reference.py` neu;
+`tests/test_reference_files.py` prüft, dass sie aktuell sind.
+
 Teure Referenzrechnungen (> 5 s) bekommen den Marker `@pytest.mark.slow`. `pytest` überspringt
 sie; `pytest -m slow` führt sie aus, ebenso der nächtliche Workflow `slow.yml`. Wer einen
 `slow`-Test ändert, führt ihn vor dem PR lokal aus.
