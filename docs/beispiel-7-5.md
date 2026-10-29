@@ -69,3 +69,35 @@ weil 1,5/N_F auf der Achse durch den Fokus gemessen wurde (T4) und in der Fokuse
 kleiner ist. In der Zwischenebene gilt das Budget außerhalb der Achszone (Kaustik der
 Kantenwelle, #31); innen liegen die Fehler wie beim System mit kleiner NA darüber. Laufzeiten
 (ein Kern): a = 0,2 mm, f/2: SFT-Kette 24 s, Referenz 2,5 s je Punkt.
+
+## Zwischenebene z = f/2 des großen Systems (#41)
+
+**Plan** (`plan_propagation`, ε = 4 %, also q = 10 mit dem Kantenterm 0,4/q aus #31):
+
+| Größe | Paper (Schritt 3b) | Planer |
+| --- | --- | --- |
+| Minimax-Krümmung c | −521 mm⁻² | −521,0 mm⁻² (isotrop bis auf 10⁻⁵) |
+| Restgradient | 230 mm⁻¹ | 228,4 mm⁻¹ (2D-Anpassung über die Proben innerhalb a) |
+| Schrittweite Δx = min(w_c/q, π/Restgradient) | 6,2 µm | 6,19 µm |
+| Punkte je Richtung | ≈ 4800 (L = 30 mm) | 5234 (L = 1,3 × 25 mm) |
+| direkte FFT je Richtung | 6·10⁴ (Nyquist, L = 30 mm) | 2·10⁵ (q Punkte je Fresnel-Breite, doppeltes Nyquist, doppeltes Fenster) |
+| Speicher eines (n, n, 3)-Feldes | – | 1,31 GB |
+
+**Rechnung.** Die volle Kette braucht etwa 5–6 GB Hauptspeicher (mehrere Felder der Größe
+(n, n, 3) gleichzeitig) und lief in dieser Umgebung (4 GB) nicht. Gerechnet ist das System mit
+gleicher NA, gleichem q und kleinerer Blende; die Punktzahl folgt n ∝ √a (Schritt ∝ w_c ∝ √f,
+Fenster ∝ a). Abseits der kantennahen Zone (d_e ≥ 40 w, Kantenverhältnis ≤ 1 %) und der Achszone
+wird die Intensität mit der geometrischen Propagation (Gl. jacobian_amplitude) verglichen
+(`experiments/beispiel_7_5_zwischenebene.py`, Test `slow` für a = 2,5 mm):
+
+| a | n | Laufzeit (ein Kern) | Spitzenspeicher | Intensität gegen Geometrie |
+| --- | --- | --- | --- | --- |
+| 1,25 mm | 1656 | 8,4 s | 0,66 GB | 1,9·10⁻³ |
+| 2,5 mm | 2342 | 19,5 s | 1,15 GB | 1,5·10⁻³ |
+| 5 mm | 3312 | 34 s | 2,2 GB | 3,0·10⁻³ |
+| 12,5 mm (hochgerechnet) | 5234 | ≈ 90 s | ≈ 5–6 GB | – |
+
+Laufzeit und Speicher wachsen wie n², also wie a. Die Abweichung von der Geometrie bleibt unter
+der Kantenwelligkeit (≤ 1 % bei 40 w). Die volle Rechnung wäre mit komponentenweiser Verarbeitung
+(je Feldkomponente eine SFT) mit etwa einem Drittel des Speichers möglich; das ist eine
+Optimierung für den Port, kein Genauigkeitsthema.

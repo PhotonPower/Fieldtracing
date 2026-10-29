@@ -6,6 +6,10 @@ exit plane, operators chosen by `chain.plan_propagation`, reference `focus.richa
 Issue #42, reduced system (same NA, smaller aperture, so f and N_F = a²/(λf) ∝ a shrink): plane
 halfway to the focus and focal plane against a direct Rayleigh-Sommerfeld quadrature over the
 stop of a closed-form aplanatic exit field (written out here, independent of the chain).
+
+Issue #41, intermediate plane z = f/2 of the large system: the plan (minimax curvature, step,
+grid, memory) against the paper; the run itself needs ~5 GB and is done for a = 2.5 mm (same NA
+and q), checked against the geometric propagation away from edge and axis zones.
 """
 
 from __future__ import annotations
@@ -14,6 +18,7 @@ import math
 
 import numpy as np
 import pytest
+from scipy.interpolate import RegularGridInterpolator
 
 from fieldtracing import chain
 from fieldtracing._types import ComplexArray, FloatArray
@@ -185,3 +190,52 @@ def test_reduced_system_focus_larger() -> None:
     plan, error, _ = _reduced_case(0.2, 0.02, "focus", 24)  # N_F ≈ 231
     assert plan.method == "debye"
     assert error <= plan.predicted_error
+
+
+# ----- issue #41: intermediate plane z = f/2 of the large system -------------------------------
+
+
+def test_plan_of_the_intermediate_plane() -> None:
+    # paper, section 7.5 step 3b: minimax c = -521 mm⁻², residual gradient 230 mm⁻¹, step 6.2 µm
+    cloud = GridlessField.aplanatic(polar_cloud(1.05 * A, 60), F, LAMBDA_UM)
+    plan = chain.plan_propagation(cloud, F / 2, chain.CircularAperture(A), 0.04)
+    p = plan.parameters
+    assert plan.method == "sft" and p["q"] == 10.0  # 0.4/q ≤ 4 %
+    assert p["curvature_min_per_mm2"] == pytest.approx(-521.0, abs=1.0)
+    assert p["curvature_max_per_mm2"] == pytest.approx(-521.0, abs=1.0)
+    # 2D minimax over the cloud samples inside a (largest Cartesian component), not the rim curve
+    assert p["residual_gradient_per_mm"] == pytest.approx(230.0, abs=2.5)
+    assert p["step_mm"] == pytest.approx(6.2e-3, abs=0.05e-3)
+    assert p["samples"] == pytest.approx(5234, abs=2)  # window 1.3 × 25 mm (paper: L = 30 mm)
+    assert p["memory_gb"] == pytest.approx(1.31, abs=0.01)  # per (n, n, 3) complex array
+    # direct FFT for the same edge accuracy: q samples per Fresnel width and 2× Nyquist
+    assert plan.situation.fft_samples > 30 * p["samples"]
+
+
+@pytest.mark.slow
+def test_intermediate_plane_scaled_against_geometry() -> None:
+    # The large system needs ~5 GB; a = 2.5 mm has the same NA, q and structure (n ∝ √a).
+    # Away from the edge zone (d_e ≥ 40 w, edge ratio ≤ 1 %) and the axis zone the intensity
+    # must follow the geometric propagation (eq. jacobian_amplitude).
+    a = 2.5
+    f = a / math.tan(math.asin(NA))
+    cloud = GridlessField.aplanatic(polar_cloud(1.05 * a, 60), f, LAMBDA_UM)
+    plan = chain.plan_propagation(cloud, f / 2, chain.CircularAperture(a), 0.04)
+    assert plan.method == "sft"
+    assert plan.parameters["samples"] == pytest.approx(5234 * math.sqrt(a / A), rel=0.01)
+    field, _ = plan.run(cloud)
+    assert isinstance(field, GriddedField)
+    lat = field.lattice  # m·I up to the anisotropy of the fitted C (~10⁻⁵)
+    assert abs(lat[0, 1]) < 1e-9 and abs(lat[1, 0]) < 1e-9
+    assert lat[0, 0] == pytest.approx(lat[1, 1], rel=1e-4)
+    intensity = np.sum(np.abs(field.values) ** 2, axis=-1)
+    w = fresnel_width(K / f)
+    deep = np.hypot(cloud.points[:, 0], cloud.points[:, 1]) <= a - 40 * w
+    geo = cloud.propagate(f / 2)
+    pts = geo.points[deep]
+    reference = np.sum(np.abs(geo.amplitude[deep]) ** 2, axis=1)
+    outside = np.hypot(pts[:, 0], pts[:, 1]) > plan.parameters["axis_zone_mm"]
+    interp = RegularGridInterpolator((field.x * lat[1, 1], field.x * lat[0, 0]), intensity)
+    got = interp(pts[outside][:, ::-1])
+    error = np.max(np.abs(got - reference[outside])) / np.max(reference)
+    assert error < 0.01  # edge ripple w/(sqrt(2π)·40 w) ≈ 1 %

@@ -427,3 +427,10 @@ Aplanatische Linse NA 0,5, Blende a = 0,1 mm (N_F = 115) und 0,2 mm (N_F = 231, 
 (Debye): 0,28 % bzw. 0,15 % bei Budget 1,7 % bzw. 0,85 %. Ebene f/2 (SFT, `slow`): 2,9 % bzw.
 ≈ 0,4 % außerhalb der Achszone bei Budget 4 % bzw. 2 %, in der Achszone 6,0 % bzw. ≈ 2,5 %.
 Tabelle und Einordnung in `docs/beispiel-7-5.md`.
+
+## Beispiel 7.5: Zwischenebene des großen Systems (Issue #41)
+
+Plan gegen Paper: c = −521,0 mm⁻², Restgradient 228,4 mm⁻¹ (Paper 230), Δx = 6,19 µm, 5234
+Punkte je Richtung (Fenster 1,3 × 25 mm statt 30 mm), 1,31 GB je (n, n, 3)-Feld. Rechnung für
+a = 2,5 mm (`slow`): Intensität gegen geometrische Propagation abseits von Kanten- und Achszone
+1,5·10⁻³. Skalierung und Laufzeiten in `docs/beispiel-7-5.md`.
