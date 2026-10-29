@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Full intermediate plane z = f/2 of the example of section 7.5 (#41) on a machine with enough
-# memory (≥ 8 GB; the full system a = 12.5 mm needs about 5-6 GB). Tested for AlmaLinux 10,
-# should work on any Linux with Python ≥ 3.10. CPU only: no GPU is used.
+# memory (≥ 8 GB; the full system a = 12.5 mm needs about 5-6 GB). Written for AlmaLinux 10 (dnf),
+# tested on Ubuntu 24.04 with SKIP_DNF=1; any Linux with Python ≥ 3.10. CPU only, no GPU.
 #
 #   curl -fsSLO https://raw.githubusercontent.com/PhotonPower/Fieldtracing/main/experiments/run_beispiel_7_5.sh
 #   bash run_beispiel_7_5.sh                 # installs into ~/fieldtracing-run, runs, writes a log
