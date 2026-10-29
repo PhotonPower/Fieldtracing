@@ -90,8 +90,8 @@ Meilenstein „F3 Integrationstest Kapitel 7.5“ auf GitHub.
 Reihenfolge: #39, dann #40, #41 und #42 (unabhängig voneinander), zuletzt #43.
 
 Abgeschlossen am 2026-10-29: Bericht `docs/beispiel-7-5.md`. Die volle Rechnung der
-Zwischenebene (≈ 5–6 GB) ist als Experiment vorbereitet und für kleinere Blenden bei gleichem q
-gerechnet; Paper Abschnitt 7.5 nachgezogen.
+Zwischenebene lief am 2026-10-30 auf dem Rechner des Maintainers (5,28 GB, 333 s, Intensität
+gegen Geometrie 4,6·10⁻³); Paper Abschnitt 7.5 nachgezogen.
 
 ## F5 im Detail
 

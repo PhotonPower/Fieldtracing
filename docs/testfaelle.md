@@ -449,3 +449,11 @@ Strehl monochromatisch 0,99243 (FFT) gegen 0,99243 (Debye aus Strahlen); FWHM qu
 Polarisation gleich (Profil < 10⁻³), längs +3,8 % (Vektoranteil). Die Abweichung bei der idealen
 Linse folgt aus der verletzten Sinusbedingung (kollineare Linse), wie ADR 0032 von Raytatouille
 dokumentiert. Bericht: `docs/vergleich-psf.md`.
+
+## Beispiel 7.5: volle Rechnung der Zwischenebene (Nachtrag zu #41)
+
+Lauf am 2026-10-30 auf AMD EPYC 9015 (AlmaLinux 10, Python 3.13.5, Commit `990a927`,
+`experiments/run_beispiel_7_5.sh`): a = 12,5 mm, 5234² Punkte, 333 s, 5,28 GB Spitzenspeicher,
+Intensität gegen geometrische Propagation abseits von Kanten- und Achszone 4,6·10⁻³; die
+kleineren Radien reproduzieren die Werte aus der Entwicklungsumgebung exakt (Abweichungen
+1,94·10⁻³, 1,48·10⁻³, 2,96·10⁻³).
