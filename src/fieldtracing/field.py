@@ -152,6 +152,62 @@ class GridlessField:
         )
 
     @classmethod
+    def aplanatic(
+        cls,
+        points: FloatArray,
+        f: float,
+        wavelength_um: float,
+        jones: ComplexArray | None = None,
+        refractive_index: float = 1.0,
+        amplitude: float = 1.0,
+    ) -> GridlessField:
+        """Exit-plane field of an aplanatic lens focusing a plane wave to (0, 0, f) (paper, 5.3).
+
+        The lens obeys the sine condition (pupil height h = f sin θ) and conserves energy; the
+        ray through the exit-plane point ρ has tan θ = |ρ|/f. With e_ρ = ρ/|ρ|, e_φ = e_z × e_ρ and
+        the input polarization J (transverse to z, amplitude `amplitude`):
+
+            U = cos^(3/2) θ·[(J·e_ρ)(cos θ e_ρ + sin θ e_z) + (J·e_φ) e_φ],
+            ψ = -k(sqrt(f² + ρ²) - f),
+
+        so that |U|² cos θ dA_exit = |J|² dA_pupil and Gl. debye gives the Richards-Wolf field
+        (`focus.richards_wolf`, E_sphere = U/cos θ). Radial (p) light keeps the meridional plane,
+        azimuthal (s) light stays azimuthal.
+
+        Args:
+            points: (N, 2) exit-plane points in mm; f: focal length in mm (> 0).
+            jones: (3,) input polarization (default x̂; the z part is ignored).
+        """
+        p = np.asarray(points, dtype=np.float64)
+        given = np.array([1.0, 0.0, 0.0]) if jones is None else jones
+        pol = np.array(given, dtype=np.complex128)
+        pol[2] = 0.0
+        pol *= amplitude / np.linalg.norm(pol)
+        rho = np.hypot(p[:, 0], p[:, 1])
+        safe = np.where(rho > 0.0, rho, 1.0)
+        e_r = np.column_stack([p[:, 0] / safe, p[:, 1] / safe, np.zeros(len(p))])
+        e_r[rho == 0.0] = (1.0, 0.0, 0.0)
+        e_phi = np.column_stack([-e_r[:, 1], e_r[:, 0], np.zeros(len(p))])
+        cos_t = f / np.sqrt(f * f + rho * rho)
+        sin_t = rho / np.sqrt(f * f + rho * rho)
+        radial = e_r @ pol
+        azimuthal = e_phi @ pol
+        p_out = cos_t[:, None] * e_r + sin_t[:, None] * np.array([0.0, 0.0, 1.0])
+        u = (cos_t**1.5)[:, None] * (radial[:, None] * p_out + azimuthal[:, None] * e_phi)
+        probe = cls.spherical(
+            p, np.zeros((len(p), 3), np.complex128), f, wavelength_um, refractive_index
+        )
+        return cls(
+            p,
+            probe.phase,
+            probe.gradient,
+            probe.hessian,
+            np.asarray(u, dtype=np.complex128),
+            wavelength_um,
+            refractive_index,
+        )
+
+    @classmethod
     def quadratic(
         cls,
         points: FloatArray,

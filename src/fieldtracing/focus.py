@@ -10,7 +10,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 import numpy as np
-from scipy.special import j1
+from scipy.special import j1, jv
 
 from fieldtracing._types import ComplexArray, FloatArray
 from fieldtracing.fourier import centered_grid, ift
@@ -133,3 +133,54 @@ def debye_focus(
     field = ift(padded, dk, axes=(0, 1))
     values = -1j * f / (2.0 * np.pi * k) * field
     return FocalField(centered_grid(m, 2.0 * np.pi / (m * dk)), np.asarray(values), k * f)
+
+
+def richards_wolf(
+    points: FloatArray,
+    f: float,
+    k: float,
+    sin_max: float,
+    defocus: float = 0.0,
+    nodes: int | None = None,
+) -> ComplexArray:
+    """Focal field of an aplanatic lens for x-polarised illumination (Richards and Wolf).
+
+    Field on the Gaussian reference sphere E_sphere = sqrt(cos θ)·[cos θ cos²φ + sin²φ,
+    (cos θ - 1) sin φ cos φ, -sin θ cos φ] (unit input amplitude, φ the azimuth of k⊥), and
+
+        E = -(i k f/2π) ∬ E_sphere exp(i k (ρ sin θ cos(φ - φ_p) + δz cos θ)) dΩ,
+
+    reduced with ∫ cos(nφ) exp(i x cos(φ - φ_p)) dφ = 2π iⁿ J_n(x) cos(nφ_p) to the integrals
+    I₀, I₁, I₂ over θ (Richards and Wolf 1959; paper, section 5.3). Composite Gauss-Legendre in θ.
+    Independent of the FFT path; reference for `debye_focus` and `GridlessField.aplanatic`.
+
+    Args:
+        points: (N, 2) points in the plane z = f + δz (mm, relative to the axis).
+        f: focal length in mm; k: wavenumber of the image space in 1/mm.
+        sin_max: NA/n (0 < sin_max < 1); defocus: δz in mm (positive away from the lens).
+        nodes: Gauss-Legendre nodes in θ (default from the largest phase k·(ρ + |δz|)).
+
+    Returns:
+        (N, 3) complex field, same normalisation as `debye_focus` with the exit-plane residual
+        of `GridlessField.aplanatic` (constant phase k f not included).
+    """
+    p = np.asarray(points, dtype=np.float64)
+    rho = np.hypot(p[:, 0], p[:, 1])
+    phi = np.arctan2(p[:, 1], p[:, 0])
+    t_max = float(np.arcsin(sin_max))
+    if nodes is None:
+        phase = k * (float(np.max(rho, initial=0.0)) * sin_max + abs(defocus) * (1 - np.cos(t_max)))
+        nodes = int(max(200, 8 * phase))
+    xg, wg = np.polynomial.legendre.leggauss(nodes)
+    t = 0.5 * t_max * (xg + 1.0)
+    w = 0.5 * t_max * wg
+    c, s = np.cos(t), np.sin(t)
+    common = w * np.sqrt(c) * np.exp(1j * k * defocus * c)
+    x = k * rho[:, None] * s[None, :]
+    i0 = (jv(0, x) * (common * s * (1 + c))[None]).sum(axis=1)
+    i1 = (jv(1, x) * (common * s * s)[None]).sum(axis=1)
+    i2 = (jv(2, x) * (common * s * (1 - c))[None]).sum(axis=1)
+    ex = -0.5j * k * f * (i0 + i2 * np.cos(2 * phi))
+    ey = -0.5j * k * f * i2 * np.sin(2 * phi)
+    ez = -k * f * i1 * np.cos(phi)
+    return np.asarray(np.stack([ex, ey, ez], axis=-1), dtype=np.complex128)
