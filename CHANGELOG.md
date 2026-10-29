@@ -118,6 +118,10 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 
 - Issue-Entwürfe für den Port im Format von Raytatouille (`docs/rtt-port/issues.md`, #53).
 
+- PSF-Vergleich am korrigierten Mikroskopobjektiv 20x/0,45 von Raytatouille: Ursache der
+  Abweichung bei hoher NA ist die verletzte Sinusbedingung der kollinearen idealen Linse;
+  Issue-Entwurf für Raytatouille überarbeitet (#60).
+
 ### Geändert
 
 - Paper, Abschnitt 7.5 (#43): periodische Kopien der Fokus-FFT (N ≈ 80 statt 40 für 10⁻³),
