@@ -1094,7 +1094,16 @@ def _sft_grid(
     q_abs = np.abs(np.linalg.eigvalsh(0.5 * (q_inv + q_inv.T)))
     chirp = 2.0 * math.pi / (float(min(np.min(c_abs), np.min(q_abs))) * step)
     n = _even(max(1.3 * window, 1.1 * chirp) / step)
-    return {"samples": float(n), "step_mm": step, "q": q}
+    eig = np.linalg.eigvalsh(c_fit)
+    return {
+        "samples": float(n),
+        "step_mm": step,
+        "q": q,
+        "curvature_min_per_mm2": float(eig[0]),
+        "curvature_max_per_mm2": float(eig[-1]),
+        "residual_gradient_per_mm": res_grad,
+        "memory_gb": 3 * 16 * float(n) ** 2 / 1e9,  # one (n, n, 3) complex128 array
+    }
 
 
 def _fft_grid(

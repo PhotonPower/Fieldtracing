@@ -102,6 +102,10 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 - Beispiel 7.5, verkleinertes System gegen direkte Rayleigh-Sommerfeld-Quadratur an Fokus und
   Zwischenebene (#42).
 
+- Beispiel 7.5, Zwischenebene (#41): Plan des großen Systems gegen das Paper, Skalierung mit
+  der Apertur (`experiments/beispiel_7_5_zwischenebene.py`), Vergleich mit der Geometrie;
+  `plan_propagation` gibt für die SFT Krümmung, Restgradient und Speicherbedarf aus.
+
 ### Geändert
 
 - `chain.debye` nimmt am Rand der k-Scheibe den nächsten Strahlwert statt 0; der Rand der
