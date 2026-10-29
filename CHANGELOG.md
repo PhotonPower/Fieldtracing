@@ -18,6 +18,10 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   skalar und vektoriell; Tests gegen Airy, geschlossene Defokus-Form, Rayleigh-Sommerfeld (T4) und
   Richards-Wolf (#1).
 
+- `sft.sft_2d` und `sft.inverse_sft_2d` für allgemeine symmetrische Krümmungsmatrizen,
+  `check_sft_sampling` mit `SamplingWarning`, `region_weights` für beliebige Blendenformen;
+  pytest-Marker `slow` und nächtlicher Workflow (#2).
+
 ### Geändert
 
 - Entscheidungen E1–E5 und ADR 0001–0003 angenommen (`docs/roadmap.md`).

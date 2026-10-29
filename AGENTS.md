@@ -20,6 +20,10 @@ ruff check . && ruff format --check . && mypy
 Vor jedem PR müssen lokal grün sein: pytest, ruff (check und format), mypy (strict). Die CI
 testet zusätzlich Python 3.10 und Windows.
 
+Teure Referenzrechnungen (> 5 s) bekommen den Marker `@pytest.mark.slow`. `pytest` überspringt
+sie; `pytest -m slow` führt sie aus, ebenso der nächtliche Workflow `slow.yml`. Wer einen
+`slow`-Test ändert, führt ihn vor dem PR lokal aus.
+
 ## Aufbau
 
 Siehe `docs/architektur.md`. Ein Modul je Baustein unter `src/fieldtracing/`, ein Testmodul je

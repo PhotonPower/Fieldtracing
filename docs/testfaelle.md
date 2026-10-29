@@ -10,7 +10,7 @@ Gemessene Werte stammen aus den Tests bzw. aus `experiments/pruefrechnungen_1d.p
 | T3 | exakte Phasenkompensation | analytisch | Rest < 10⁻⁶ rad; parabolisch + exaktes k_z: −2819,45 rad | ✅ | `test_focus.py` |
 | T4 | Debye gegen Rayleigh-Sommerfeld, N_F von 3 bis 10³ | exaktes RS-Integral auf der Achse (radiale Quadratur) | Abweichung fällt wie 1/N_F, Fokusverschiebung zur Linse, im Debye-Integral null | ✅ auf der Achse | `test_debye.py` |
 | T5 | gleichmäßige Kantenformel | direkte Quadratur | relativer Fehler < 1 % für \|x_s − x_e\| ≤ 0,05 mm; Schattengrenze ½; Übergang in die Kantenwelle auf 0,5 % | ✅ 1D | `test_edge.py` |
-| T6 | SFT | direkte Quadratur (4·10⁶ Punkte) | siehe Tabelle unten | ✅ 1D, 2D diagonal | `test_sft.py` |
+| T6 | SFT | direkte Quadratur (1D); geschlossene Formen (2D: Gauß × Chirp, gedrehtes Rechteck über Fresnel-Integrale) | siehe Tabellen unten | ✅ 1D und 2D, allgemeines C | `test_sft.py`, `test_sft_2d.py` |
 | T7 | Maslov-Index | Winkelspektrum | Brennlinie (1D): μ = 1, Phase −π/2; Punktfokus (2D): μ = 2 | ◐ 1D | `test_semiclassical.py` |
 | T8 | Fresnel-Operator | analytisch | R + T = 1, r_p = −r_s bei 0°, r_p = 0 bei Brewster, Transversalität, Snellius | ✅ | `test_lpia.py` |
 | B | Beispiel Kapitel 7.5 | verkleinertes System gegen RS; Kennzahlen | Kennzahlen wie im Paper | ◐ Kennzahlen | `test_selection.py` |
@@ -82,3 +82,26 @@ bei N_F ≲ 10 zieht). Off-axis-Vergleich in 2D steht noch aus (später als `slo
 Richards-Wolf-Integrale: maximaler Fehler 1,3·10⁻⁵ (NA 0,5) bzw. 1,9·10⁻⁵ (NA 0,9) relativ zum
 Maximum; Verhältnis der Maxima |E_z|/|E_x| = 0,19 bzw. 0,39. Das Feld ist divergenzfrei
 (∇·E relativ zu k·max|E| < 10⁻³, z-Ableitung über ±2 nm).
+
+## SFT für allgemeines C (Issue #2)
+
+C mit Eigenwerten 8000 und −5000 mm⁻², um 30° gedreht (Sattel, sig C = 0); Fenster 3 mm.
+
+- **Gauß × Chirp** (Gauß-Matrix um 50° gedreht, kommutiert nicht mit C) gegen die geschlossene
+  Form exp(−½kᵀM⁻¹k)/(2π√det M), M = A − iC: relativer Fehler 5·10⁻⁸ (Rundung bei Phasen bis
+  10⁴ rad).
+- **PFT-Grenzfall** (dieselbe glatte Gauß-Funktion): Abweichung < 2·10⁻³.
+- **Hin- und Rück-SFT** (`inverse_sft_2d` mit B = −C⁻¹, Gitter L = C): exakt bis auf Rundung
+  (< 10⁻¹⁰), auch für ein nicht bandbegrenztes Feld, weil sich die Transferfunktionen diskret
+  aufheben.
+- **Gedrehtes Rechteck** (Halbbreiten 0,6 und 0,4 mm längs der Eigenvektoren von C,
+  subpixelgewichtet) gegen das Produkt zweier Fresnel-Integrale in geschlossener Form:
+
+| N | Δx | w_c/Δx (kleinstes) | Fehler |
+| --- | --- | --- | --- |
+| 1024 | 2,93 µm | 5,4 | 3,7 % |
+| 2048 | 1,46 µm | 10,8 | 2,1 % |
+| 4096 | 0,73 µm | 21,6 | 1,2 % (`slow`, 40 s) |
+
+Erste Ordnung (Verhältnis ≈ 1,8 je Halbierung von Δx). Ohne Subpixel-Gewichtung konvergiert der
+Fehler unregelmäßig (4,1 %, 3,4 %, 1,7 %), weil die Kantenlage relativ zum Gitter springt.
