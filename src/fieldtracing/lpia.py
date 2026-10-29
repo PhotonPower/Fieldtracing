@@ -16,6 +16,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 import numpy as np
+from numpy.typing import NDArray
 
 from fieldtracing._types import ComplexArray, FloatArray
 
@@ -103,6 +104,109 @@ def fresnel_operator(
 
 
 # ---------------------------------------------------------------------------------------------
+# Vectorised variants over arrays of rays (leading axes ...), same formulas as above
+# ---------------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class FresnelArrays:
+    """Fresnel amplitude coefficients per ray (complex arrays of a common shape)."""
+
+    r_s: ComplexArray
+    r_p: ComplexArray
+    t_s: ComplexArray
+    t_p: ComplexArray
+    cos_t: ComplexArray
+
+
+def fresnel_coefficients_batch(n1: float, n2: float, cos_i: FloatArray) -> FresnelArrays:
+    """`fresnel_coefficients` for an array of cos θ_i (Convention A, Byrnes eq. (6)).
+
+    Beyond the critical angle cos_t is imaginary (Im ≥ 0) and |r| = 1; no exception.
+    """
+    ci = np.asarray(cos_i, dtype=np.float64)
+    cos_t = np.sqrt(1.0 - (n1 / n2) ** 2 * (1.0 - ci * ci) + 0j)
+    a, b = n1 * ci, n2 * cos_t
+    c, d = n2 * ci, n1 * cos_t
+    return FresnelArrays(
+        np.asarray((a - b) / (a + b)),
+        np.asarray((c - d) / (c + d)),
+        np.asarray(2 * a / (a + b)),
+        np.asarray(2 * a / (c + d)),
+        np.asarray(cos_t),
+    )
+
+
+def _unit_rows(v: FloatArray) -> FloatArray:
+    return np.asarray(v / np.linalg.norm(v, axis=-1, keepdims=True))
+
+
+def _dot(a: FloatArray, b: FloatArray) -> FloatArray:
+    return np.asarray(np.sum(a * b, axis=-1))
+
+
+def refract_batch(
+    k_in: FloatArray, normal: FloatArray, k2: float
+) -> tuple[FloatArray, NDArray[np.bool_]]:
+    """Vector Snell law for arrays of rays (..., 3); see `refract`.
+
+    Args:
+        k_in: (..., 3) incident wave vectors in 1/mm.
+        normal: (..., 3) surface normals (any length and orientation; flipped into medium 2).
+        k2: wavenumber n₂·k₀ of medium 2 in 1/mm.
+
+    Returns:
+        (k_out (..., 3) in 1/mm, total-reflection mask (...)). Totally reflected rays get NaN
+        instead of an exception (status flag, as Raytatouille's ADR 0009).
+    """
+    k = np.asarray(k_in, dtype=np.float64)
+    n = _unit_rows(np.asarray(normal, dtype=np.float64))
+    n = np.where((_dot(k, n) < 0.0)[..., None], -n, n)
+    kn = _dot(k, n)
+    disc = k2 * k2 - _dot(k, k) + kn * kn
+    tir = disc < 0.0
+    root = np.sqrt(np.where(tir, np.nan, disc))
+    return np.asarray(k + (root - kn)[..., None] * n), np.asarray(tir)
+
+
+def fresnel_operator_batch(
+    k_in: FloatArray, normal: FloatArray, n1: float, n2: float
+) -> tuple[FloatArray, ComplexArray, NDArray[np.bool_]]:
+    """`fresnel_operator` for arrays of rays: T = t_s s sᵀ + t_p p_out p_inᵀ (eq. fresnel_operator).
+
+    Args:
+        k_in: (..., 3) incident directions or wave vectors (only the direction is used).
+        normal: (..., 3) surface normals (orientation irrelevant).
+        n1, n2: refractive indices.
+
+    Returns:
+        (unit transmitted directions (..., 3), T (..., 3, 3) complex, total-reflection mask (...)).
+        Totally reflected rays get a NaN direction and T = 0. At normal incidence s is any unit
+        vector ⟂ N (same choice as `fresnel_operator`).
+    """
+    k_hat = _unit_rows(np.asarray(k_in, dtype=np.float64))
+    n = _unit_rows(np.asarray(normal, dtype=np.float64))
+    n = np.where((_dot(k_hat, n) < 0.0)[..., None], -n, n)
+    k_out, tir = refract_batch(n1 * k_hat, n, n2)
+    out_hat = _unit_rows(k_out)
+    cross = np.cross(k_hat, n)
+    normal_inc = np.linalg.norm(cross, axis=-1) < 1e-12
+    if np.any(normal_inc):
+        ex, ey = np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0])
+        helper = np.where((np.abs(n[..., 0]) < 0.9)[..., None], ex, ey)
+        cross = np.where(normal_inc[..., None], np.cross(helper, n), cross)
+    s = _unit_rows(cross)
+    p_in = np.cross(k_hat, s)
+    p_out = np.cross(out_hat, s)
+    co = fresnel_coefficients_batch(n1, n2, _dot(k_hat, n))
+    t = co.t_s[..., None, None] * np.einsum("...i,...j->...ij", s, s) + co.t_p[
+        ..., None, None
+    ] * np.einsum("...i,...j->...ij", p_out, p_in)
+    t = np.where(tir[..., None, None], 0.0, t)
+    return out_hat, np.asarray(t, dtype=np.complex128), tir
+
+
+# ---------------------------------------------------------------------------------------------
 # LPIA step through a curved surface with a ray mesh (paper, sections 3.2 and 3.5)
 # ---------------------------------------------------------------------------------------------
 
@@ -121,6 +225,8 @@ class SurfaceTrace:
         transmitted: T·U₁ (..., 3), the Fresnel operator applied at the surface point.
         direction_in, direction_out: unit ray directions (..., 3) before and after the surface.
         cos_in, cos_out: cos θ_e, cos θ_a against the surface normal.
+        total_reflection: mask of totally reflected rays; their landing point, phase,
+            direction_out and cos_out are NaN and `transmitted` is zero.
     """
 
     points: FloatArray
@@ -130,6 +236,7 @@ class SurfaceTrace:
     direction_out: FloatArray
     cos_in: FloatArray
     cos_out: FloatArray
+    total_reflection: NDArray[np.bool_]
 
 
 def trace_surface(
@@ -174,15 +281,8 @@ def trace_surface(
     normal = np.stack([-hx, -hy, np.ones_like(hx)], axis=-1)
     normal /= np.linalg.norm(normal, axis=-1, keepdims=True)
 
-    flat_in = s_in.reshape(-1, 3)
-    flat_n = normal.reshape(-1, 3)
-    flat_u = np.asarray(amplitude).reshape(-1, 3)
-    s_out = np.empty_like(flat_in)
-    transmitted = np.empty(flat_u.shape, dtype=np.complex128)
-    for i in range(flat_in.shape[0]):
-        s_out[i], op = fresnel_operator(flat_in[i], flat_n[i], n1, n2)
-        transmitted[i] = op @ flat_u[i]
-    s_out = s_out.reshape(s_in.shape)
+    s_out, op, tir = fresnel_operator_batch(s_in, normal, n1, n2)
+    transmitted = np.einsum("...ij,...j->...i", op, np.asarray(amplitude))
     z_s = sag(px, py)
     length_out = (z_out - z_s) / s_out[..., 2]
     landing = np.stack([px + length_out * s_out[..., 0], py + length_out * s_out[..., 1]], axis=-1)
@@ -190,11 +290,12 @@ def trace_surface(
     return SurfaceTrace(
         landing,
         np.asarray(new_phase),
-        transmitted.reshape(np.shape(amplitude)),
+        np.asarray(transmitted),
         s_in,
         s_out,
         np.sum(s_in * normal, axis=-1),
         np.sum(s_out * normal, axis=-1),
+        tir,
     )
 
 

@@ -44,6 +44,10 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   Umtasten mit analytischer Trägerphase, Adapter für Propagation und PFT;
   `GeometricResult.curvature` liefert die neue Hesse-Matrix (#17).
 
+- `lpia.refract_batch`, `lpia.fresnel_coefficients_batch`, `lpia.fresnel_operator_batch`:
+  vektorisiert über beliebig viele Strahlen, Totalreflexion als Maske; `trace_surface` nutzt sie
+  (≈ 130-mal schneller) und liefert `SurfaceTrace.total_reflection` (#21).
+
 - `mesh.triangulate`, `mesh.triangle_area_ratio`, `mesh.fit_derivatives` und
   `mesh.mesh_jacobian_cloud`: Jacobi-Faktor, Maslov-Index und Kaustik-Erkennung aus
   unstrukturierten Strahlwolken (Delaunay, Obskurationen, quadratische Ausgleichsrechnung,

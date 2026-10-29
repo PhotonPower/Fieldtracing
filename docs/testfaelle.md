@@ -330,3 +330,15 @@ Fokusfeld nicht maßgeblich.
 - *Fenster der SFT:* Mit demselben Gitter für Hin- und Rück-SFT gilt allein aus der
   Chirp-Bedingung n ≈ π q²/m. Bei kleinen Aperturen ist deshalb die direkte FFT billiger; das
   bestätigt die Aussage des Papers (SFT lohnt ab N_F ≳ 10²).
+
+## Vektorisierte LPIA (Issue #21)
+
+`refract_batch`, `fresnel_coefficients_batch` und `fresnel_operator_batch` gegen die bisherigen
+Einzelstrahl-Funktionen: 500 zufällige Richtungen (θ < 70°, Seed 3) mit gekippten Normalen
+beliebiger Orientierung und Länge, dazu senkrechter Einfall: Abweichung < 10⁻¹⁴. Totalreflexion
+(Glas → Luft) als Maske genau für (n₁/n₂)²·sin²θ > 1, Richtung NaN, T = 0, |r| = 1;
+`trace_surface` markiert totalreflektierte Strahlen in `total_reflection`. Alle Tests aus
+`test_lpia.py` und `test_lpia_surface.py` unverändert grün.
+
+Laufzeit (ein Kern): Schleife 7,7·10³ Strahlen/s, vektorisiert 9,8·10⁵ Strahlen/s, Faktor ≈ 130;
+`trace_surface` mit 10⁶ Strahlen durch eine Sphäre (30 Newton-Schritte) 3 s statt etwa 130 s.
