@@ -196,3 +196,21 @@ Nachbarstrahlen (Differenzen zweiter Ordnung, auch am Rand).
 - **Ebene Welle durch eine Sphäre, auf der Achse:** U₂ = t·e^(−iπμ/2)/|1 − d/f′| mit
   f′ = n₂R/(n₂ − n₁) = 60 mm für d = 10 … 50 mm (μ = 0) und d = 90 mm hinter dem Fokus (μ = 2,
   Gouy-Phase −π): Fehler < 10⁻⁵.
+
+## Hybride Felddarstellung (Issue #17)
+
+Sphärische Welle (f = 25 mm, λ = 0,5 µm) auf einem regelmäßigen Gitter über ±2 mm, Gauß-Hülle,
+transversale Polarisation.
+
+| Größe | 21² Punkte | 41² Punkte | Ordnung |
+| --- | --- | --- | --- |
+| Phase aus Taylor-Entwicklung (Zellmitten) | 2,9·10⁻³ rad | 3,9·10⁻⁴ rad | h³ (Verhältnis 7,4) |
+| Residuum, linear | 4,7·10⁻³ | 1,2·10⁻³ | h² (Verhältnis 3,9) |
+| Residuum, Clough-Tocher | 6,3·10⁻⁴ | 1,0·10⁻⁴ | kleiner, konvergent |
+
+Gegenprobe zu ADR 0003 (Krümmung aus Kapitel 7.5, 81² Punkte über ±2 mm): Residuum
+interpolieren und Phase auswerten ergibt < 10⁻³ Fehler, lineare Interpolation des vollen Feldes
+U·e^(iψ) über 50 %.
+
+PFT hin und zurück über die Feldobjekte ist exakt; geometrische Propagation einer sphärischen
+Welle um 10 mm liefert die Hesse-Matrix der Welle mit f = 15 mm (H₂ = H₁·(∂ρ₂/∂ρ₁)⁻¹).
