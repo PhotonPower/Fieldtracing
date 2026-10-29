@@ -108,6 +108,11 @@ Meilenstein „F5 Integrationsvorschlag“ auf GitHub. Alles entsteht als Dokume
 
 Reihenfolge: #50, dann #51 und #52, zuletzt #53.
 
+Stand 2026-10-29: alle vier Teile gemergt (Sollwertdateien `reference/field/`, ADR-Entwurf,
+API-Skizze und Issue-Entwürfe unter `docs/rtt-port/`). **Offen ist die Abnahme: Freigabe durch
+den Maintainer.** Danach beginnt F6 (Port in Raytatouille) nach dessen Prozess, mit den
+Entwürfen 0 und 1 aus `docs/rtt-port/issues.md` als erste Fragen.
+
 ## F4 im Detail
 
 Meilenstein „F4 Brücke zu Raytatouille (lesend)“ auf GitHub; alle Issues mit Label `rtt`.
