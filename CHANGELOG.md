@@ -33,4 +33,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 
 ### Geändert
 
+- Paper: Gültigkeitsgrenze der Debye-Näherung quantifiziert (≈ 1,5/N_F statt N_F ≲ 10),
+  Abschnitt 5.3, Tabellen 7.1 und 7.3, Testliste in Kapitel 8 (#8).
+
 - Entscheidungen E1–E5 und ADR 0001–0003 angenommen (`docs/roadmap.md`).

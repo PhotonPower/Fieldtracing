@@ -366,7 +366,7 @@ Das ist das Debye-Integral~\cite{bornwolf1999,stamnes1986}. Mit dem Raumwinkelel
 
 \paragraph{Konsistenzwarnung.} Kombiniert man eine parabolische Linsenphase $-k_0|\rh|^2/(2f)$ mit dem exakten $k_z$, bleibt die Restphase $f\big(k_z-k_0+|\kp|^2/(2k_0)\big)\approx-f|\kp|^4/(8k_0^3)$ stehen. Für $f=25\,\text{mm}$, $\NA=0{,}5$ und $\lambda_0=500\,\text{nm}$ sind das am Rand etwa $-2{,}8\times10^3\,\text{rad}$, also rund 450 Wellenlängen. Linsenphase und Ausbreitungsoperator müssen daher in derselben Näherungsstufe formuliert sein.
 
-\paragraph{Gültigkeit und Numerik.} Die Debye-Darstellung erfordert eine große Fresnel-Zahl $N_F=a^2/(\lambda_0f)\gg1$ der Apertur mit Radius $a$~\cite{wolfli1981}. Das ist dieselbe Bedingung, unter der die PFT in Schritt~1 gilt. Die numerische Auswertung von \eqref{eq:debye} mit FFT bzw. Chirp-z-Transformation ist etabliert~\cite{leutenegger2006}. Die FFT approximiert das Integral; an der scharfen Berandung $|\kp|=k_0\NA$ konvergiert sie nur mit erster Ordnung in der Schrittweite. Eine subpixelgenau gewichtete oder leicht geglättete Berandung verbessert das deutlich (vgl.~\cite{leutenegger2006} und Abschnitt~\ref{sec:sft}).
+\paragraph{Gültigkeit und Numerik.} Die Debye-Darstellung erfordert eine große Fresnel-Zahl $N_F=a^2/(\lambda_0f)\gg1$ der Apertur mit Radius $a$~\cite{wolfli1981}. Die numerische Prüfung (Abschnitt~8, Test~T4) quantifiziert das: Auf der Achse fällt die Abweichung zwischen Debye- und Rayleigh-Sommerfeld-Feld bei $\NA=0{,}1$ wie etwa $1{,}5/N_F$; bei $N_F=10$ beträgt sie noch $17\,\%$, und die Fokusverschiebung zur Linse ist deutlich ($-0{,}12\,\lambda_0/\NA^2$). Für eine Toleranz $\varepsilon$ ist die Debye-Darstellung daher erst ab $N_F\gtrsim1{,}5/\varepsilon$ geeignet, für $1\,\%$ also ab $N_F\approx150$. Messungen abseits der Achse und bei hoher NA stehen noch aus. Das ist dieselbe Bedingung, unter der die PFT in Schritt~1 gilt. Die numerische Auswertung von \eqref{eq:debye} mit FFT bzw. Chirp-z-Transformation ist etabliert~\cite{leutenegger2006}. Die FFT approximiert das Integral; an der scharfen Berandung $|\kp|=k_0\NA$ konvergiert sie nur mit erster Ordnung in der Schrittweite. Eine subpixelgenau gewichtete oder leicht geglättete Berandung verbessert das deutlich (vgl.~\cite{leutenegger2006} und Abschnitt~\ref{sec:sft}).
 
 \paragraph{Gouy-Phase.} Propagiert man statt mit \eqref{eq:debye} rein geometrisch durch den Fokus, so wechseln beide Eigenwerte von $\partial\rh_2/\partial\rh_1$ das Vorzeichen. Dann ist $\mu=2$ in \eqref{eq:jacobian_amplitude}, also ein Phasensprung von $-\pi$.
 
@@ -510,7 +510,7 @@ gemischt & $F_1\gg1$, $F_2\lesssim1$ & gemischte Karte: PFT/SFT entlang $\bm e_1
 \addlinespace
 Ziel nahe einer Kaustik & $|J|\to0$ im Zielgebiet; Kaustikbereich lateral $\sim\lambda/\NA$, axial $\sim\lambda/\NA^2$ & Winkelkarte und volles Rückintegral (FFT), Gl.~\eqref{eq:debye}\\
 \addlinespace
-Fokus mit kleiner Fresnel-Zahl & $N_F\lesssim10$ & Rayleigh-Sommerfeld \eqref{eq:rs_kernel} statt Debye\\
+Fokus mit kleiner Fresnel-Zahl & Debye-Fehler $\approx1{,}5/N_F>\varepsilon$ (auf der Achse bei NA 0,1 gemessen) & Rayleigh-Sommerfeld \eqref{eq:rs_kernel} statt Debye\\
 \bottomrule
 \end{tabularx}
 \caption{Auswahlregeln für die Bausteine. Für Rücktransformationen wird $\Hess_\psi$ durch $\Hess_{\tilde\psi}$ ersetzt.}
@@ -573,7 +573,7 @@ Ecken (kritische Punkte 3.~Art) & relativ $\mathcal O(k_0^{-1})$ & -- & meist ve
 \addlinespace
 Geometrische Propagation nahe Kaustik & divergiert für $J\to0$ & Abstand zur Kaustik vs.\ $\lambda/\NA$, $\lambda/\NA^2$ & Winkelkarte\\
 \addlinespace
-Debye-Näherung & wächst mit fallendem $N_F$~\cite{wolfli1981} & $N_F$ & Rayleigh-Sommerfeld\\
+Debye-Näherung & $\approx1{,}5/N_F$ (auf der Achse bei NA 0,1 gemessen, Test T4)~\cite{wolfli1981} & $N_F$ & Rayleigh-Sommerfeld\\
 \addlinespace
 LPIA & abhängig von Krümmungsradius$/\lambda$~\cite{vonpfeil2000} & $R_c/\lambda$ & lokal rigoroser Löser\\
 \addlinespace
@@ -678,7 +678,7 @@ Jede Herleitung dieses Berichts lässt sich mit einfachen Programmen gegen eine 
     \item \textbf{Van-Vleck-Kern} \eqref{eq:van_vleck} gegen den exakten Kern \eqref{eq:rs_kernel}. Erwartet wird ein relativer Fehler $\sim1/(kr)$.
     \item \textbf{Jacobi-Gesetz} \eqref{eq:jacobian_amplitude}: divergente Welle ($R_0=50\,$mm) mit Super-Gauß-Amplitude, Propagation um $d=30\,$mm mit dem Winkelspektrum. Voruntersuchung (1D) an drei Strahlen: $|E_2|$ numerisch $0{,}7906$, $0{,}7905$, $0{,}7606$; Vorhersage $0{,}7906$, $0{,}7904$, $0{,}7603$.
     \item \textbf{Phasenkompensation} \eqref{eq:exact_legendre}: bei exakt sphärischer Phase Restfehler $<10^{-10}\,$rad (Rundung). Bei parabolischer Phase mit exaktem $k_z$ ergeben sich $-2819\,$rad am Rand.
-    \item \textbf{Debye vs.\ Rayleigh-Sommerfeld} für variierende Fresnel-Zahl: Abweichungen, insbesondere eine Fokusverschiebung, sollten für $N_F\lesssim10$ sichtbar werden.
+    \item \textbf{Debye vs.\ Rayleigh-Sommerfeld} für $N_F=3$ bis $10^3$ auf der Achse ($\NA=0{,}1$): Abweichung $0{,}50$, $0{,}17$, $0{,}053$, $0{,}015$, $0{,}0015$, also etwa $1{,}5/N_F$; Fokusverschiebung zur Linse von $-0{,}31$ bis $-0{,}0012\,\lambda_0/\NA^2$, im Debye-Integral keine.
     \item \textbf{Kantenformel} \eqref{eq:fresnel_edge} gegen direkte Quadratur ($\psi''=2000$, $x_e=0{,}3$, Gauß-Amplitude): relative Fehler $0{,}1$--$0{,}9\,\%$ für $|x_s-x_e|\le0{,}05$.
     \item \textbf{SFT} \eqref{eq:sft_formula} gegen Brute-Force-Quadratur mit Konvergenzstudie, siehe Tabelle in Abschnitt~\ref{sec:sft}.
     \item \textbf{Maslov-Index}: Phasensprung $-\pi$ an einem Punktfokus und $-\pi/2$ an einer Brennlinie (zylindrische Linse).

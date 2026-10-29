@@ -75,8 +75,7 @@ Debye-Maximum, Verschiebungen in Einheiten von λ/NA²):
 | 1000 | 49,5 | 0,00152 | 1,52 | −0,0012 | 0 |
 
 Die Abweichung fällt wie etwa 1,5/N_F; die Fokusverschiebung zeigt zur Linse. Für 1 % Genauigkeit
-braucht die Debye-Näherung hier N_F ≳ 150 (Issue mit Label `paper`, weil Tabelle 7.1 die Grenze
-bei N_F ≲ 10 zieht). Off-axis-Vergleich in 2D steht noch aus (später als `slow`).
+braucht die Debye-Näherung hier N_F ≳ 150; das Paper ist entsprechend korrigiert (#8). Off-axis-Vergleich in 2D steht noch aus (später als `slow`).
 
 **Vektor-Fokus** (aplanatische Linse, x-polarisiert) gegen die Bessel-Quadratur der
 Richards-Wolf-Integrale: maximaler Fehler 1,3·10⁻⁵ (NA 0,5) bzw. 1,9·10⁻⁵ (NA 0,9) relativ zum
