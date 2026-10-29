@@ -13,7 +13,7 @@ Gemessene Werte stammen aus den Tests bzw. aus `experiments/pruefrechnungen_1d.p
 | T6 | SFT | direkte Quadratur (1D); geschlossene Formen (2D: Gauß × Chirp, gedrehtes Rechteck über Fresnel-Integrale) | siehe Tabellen unten | ✅ 1D und 2D, allgemeines C | `test_sft.py`, `test_sft_2d.py` |
 | T7 | Maslov-Index | Winkelspektrum | Brennlinie (1D): μ = 1, Phase −π/2; Punktfokus (2D): μ = 2 | ◐ 1D | `test_semiclassical.py` |
 | T8 | Fresnel-Operator | analytisch | R + T = 1, r_p = −r_s bei 0°, r_p = 0 bei Brewster, Transversalität, Snellius | ✅ | `test_lpia.py` |
-| B | Beispiel Kapitel 7.5 | verkleinertes System gegen RS; Kennzahlen | Kennzahlen wie im Paper | ◐ Kennzahlen | `test_selection.py` |
+| B | Beispiel Kapitel 7.5 | verkleinertes System gegen RS; Kennzahlen | Kennzahlen wie im Paper | ◐ Kennzahlen, Minimax-Krümmung | `test_selection.py`, `test_curvature_fit.py` |
 
 ## T6: SFT-Fehler (1D, c = 10⁵ mm⁻², a = 1 mm, Fenster 4 mm)
 
@@ -105,3 +105,19 @@ C mit Eigenwerten 8000 und −5000 mm⁻², um 30° gedreht (Sattel, sig C = 0);
 
 Erste Ordnung (Verhältnis ≈ 1,8 je Halbierung von Δx). Ohne Subpixel-Gewichtung konvergiert der
 Fehler unregelmäßig (4,1 %, 3,4 %, 1,7 %), weil die Kantenlage relativ zum Gitter springt.
+
+## Minimax-Krümmung (Issue #3)
+
+Beispiel aus Abschnitt 7.5 (D = 25 mm, NA 0,5, λ = 0,5 µm, f = 21,65 mm), gelöst als lineares
+Programm (exakt, keine Iteration):
+
+| Größe | Paper | Rechnung |
+| --- | --- | --- |
+| Minimax-Krümmung c | −521 mm⁻² | −521,04 mm⁻² (f_eff = 24,12 mm) |
+| Restgradient | 230 mm⁻¹ | 229,83 mm⁻¹ |
+| Restgradient bei Scheitelkrümmung −k/f | 972 mm⁻¹ | 972,0 mm⁻¹ |
+| SFT-Punkte je Richtung (L = 30 mm, q = 10) | ≈ 4800 | 4843 (Scheitelkrümmung: 9282) |
+
+Die 2D-Anpassung (Matrix C, maximale kartesische Komponente des Restgradienten, weil sie auf
+einem achsparallelen Gitter die Nyquist-Schrittweite bestimmt) liefert auf der Kreisscheibe
+C = −521,04·I. Rein quadratische Phasen werden exakt angepasst.
