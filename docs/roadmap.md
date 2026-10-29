@@ -37,7 +37,7 @@ Leitlinien, die sich aus dem Ziel ergeben:
 | **F2 Hybride Darstellung und Verkettung** (#17–#21) ✅ | `GridlessField`/`GriddedField` mit Verhalten, Übergänge Punktwolke ↔ Gitter, Jacobi-Faktor aus Maschenflächen, Auswahlregeln als Planer, Operatorkette | Kette Linse → Blende → Ebene stimmt mit dem Winkelspektrum innerhalb der Toleranzen aus Tabelle 7.3 |
 | **F3 Integrationstest Kapitel 7.5** (#39–#43) ✅ | Beispiel D = 25 mm, NA 0,5: Fokus und Zwischenebene; verkleinertes System gegen direkte Rayleigh-Sommerfeld-Rechnung; vektoriell mit Richards-Wolf | Abweichungen und Punktzahlen dokumentiert; Paper bei Abweichungen korrigiert |
 | **F4 Brücke zu Raytatouille (lesend)** (#22–#25) ✅ | Adapter: Strahldaten aus der Python-API von Raytatouille → `GridlessField` (Phase aus OPL, Amplitude aus weight und Maschen, Polarisation aus PRT) | Debye-Fokus aus Raytatouille-Strahlen = FFT-PSF von Raytatouille bei kleiner NA; Abweichungen bei hoher NA erklärt (√cos, Vektor) |
-| **F5 Integrationsvorschlag** | ADR-Entwurf `rtt-field`, API-Skizze, Sollwertdateien für den Port, Issue-Entwürfe im Format von Raytatouille | Freigabe durch den Maintainer |
+| **F5 Integrationsvorschlag** (#50–#53) | ADR-Entwurf `rtt-field`, API-Skizze, Sollwertdateien für den Port, Issue-Entwürfe im Format von Raytatouille | Freigabe durch den Maintainer |
 | F6 Port (in Raytatouille) | C++-Bibliothek nach Freigabe, nach den Regeln von Raytatouille | dort |
 
 F1 und F4 sind unabhängig voneinander; F2 braucht F1; F3 braucht F2; F5 braucht F3 und F4.
@@ -92,6 +92,21 @@ Reihenfolge: #39, dann #40, #41 und #42 (unabhängig voneinander), zuletzt #43.
 Abgeschlossen am 2026-10-29: Bericht `docs/beispiel-7-5.md`. Die volle Rechnung der
 Zwischenebene (≈ 5–6 GB) ist als Experiment vorbereitet und für kleinere Blenden bei gleichem q
 gerechnet; Paper Abschnitt 7.5 nachgezogen.
+
+## F5 im Detail
+
+Meilenstein „F5 Integrationsvorschlag“ auf GitHub. Alles entsteht als Dokument unter
+`docs/rtt-port/` bzw. als Sollwertdatei unter `reference/`; in Raytatouille wird nichts angelegt
+(Regel 8).
+
+| Nr. | Issue | Inhalt | Abnahme |
+| --- | --- | --- | --- |
+| F5-1 | #50 | Sollwertdateien im Format `raytatouille-result` (Typ-Vorschlag `FieldReference`) | Roundtrip, Kodierung wie Raytatouilles `encode_json`, Dateien aktuell |
+| F5-2 | #51 | ADR-Entwurf `rtt-field` | vollständig, mit Belegen aus F1–F4 |
+| F5-3 | #52 | API-Skizze C++ und Python | jede zu portierende Funktion zugeordnet |
+| F5-4 | #53 | Issue-Entwürfe im Format von Raytatouille | Freigabe durch den Maintainer |
+
+Reihenfolge: #50, dann #51 und #52, zuletzt #53.
 
 ## F4 im Detail
 
