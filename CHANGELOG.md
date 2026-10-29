@@ -108,6 +108,10 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 
 ### Geändert
 
+- Paper, Abschnitt 7.5 (#43): periodische Kopien der Fokus-FFT (N ≈ 80 statt 40 für 10⁻³),
+  nachgerechnete Punktzahlen und Speicher der Zwischenebene, Fehlerbudget mit Messwerten,
+  Fresnel-Zahl des verkleinerten Systems (≈ 1440 statt 144) und Ergebnisse des Integrationstests.
+
 - `chain.debye` nimmt am Rand der k-Scheibe den nächsten Strahlwert statt 0; der Rand der
   Scheibe kommt allein aus den Subpixel-Gewichten. Vorher konvergierte der Strehl-Wert nur mit
   erster Ordnung in der k-Schrittweite (#25).
