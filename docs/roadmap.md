@@ -44,17 +44,17 @@ F1 und F4 sind unabhängig voneinander; F2 braucht F1; F3 braucht F2; F5 braucht
 
 ## F1 im Detail (nächste Arbeit)
 
-Vorgeschlagene Issues, je ein Auftrag für einen Agenten. Sie werden erst nach Freigabe angelegt.
+Je ein Issue pro Auftrag für einen Agenten, Meilenstein „F1 Bausteine 2D“ auf GitHub.
 
-| Nr. | Baustein | Inhalt | Referenz und Abnahme |
-| --- | --- | --- | --- |
-| F1-1 | `sft.py` | `sft_2d` für symmetrisches C (Hauptachsen, Rotation des Gitters), inverse SFT | Separabler Fall = Produkt der 1D-SFT; gedrehtes C gegen direkte 2D-Quadratur; PFT-Grenzfall |
-| F1-2 | `sft.py` / `selection.py` | Minimax-Anpassung der Krümmung c für gegebenes ψ (Kap. 7.4) | Beispiel aus 7.5: c = −521 mm⁻², Restgradient 230 mm⁻¹ |
-| F1-3 | `pft.py` | inverse PFT, Summe über mehrere stationäre Punkte, Warnung bei kleinem F | Hin- und Rück-PFT einer sphärischen Welle; Konvergenz O(1/F) |
-| F1-4 | `focus.py` | Debye-Integral (Gl. debye) per FFT mit subpixelgewichteter k-Berandung und Nullauffüllung | Airy-Integral; T4: Abweichung von Rayleigh-Sommerfeld wächst mit fallendem N_F |
-| F1-5 | `edge.py` | 2D-Randintegral (Gl. bdw), kritische Punkte 2. Art, Ecken | Kreisblende und Rechteckblende gegen 2D-Quadratur; Ordnung k^−1/2 bzw. k^−1 |
-| F1-6 | `lpia.py` | LPIA-Schritt an einer Sphäre mit Strahlnetz, Energiebilanz nach Gl. interface_amplitude | Ebene Welle durch eine Planfläche = Fresnel; Fluss bleibt mit R + T = 1 erhalten |
-| F1-7 | `semiclassical.py` | Maslov-Index am Punktfokus (μ = 2) und an Brennlinien in 2D | 2D-Winkelspektrum: Phasensprung −π bzw. −π/2 |
+| Nr. | Issue | Baustein | Inhalt | Referenz und Abnahme |
+| --- | --- | --- | --- | --- |
+| F1-1 | #2 | `sft.py` | `sft_2d` für symmetrisches C (Hauptachsen, Rotation des Gitters), inverse SFT | Separabler Fall = Produkt der 1D-SFT; gedrehtes C gegen direkte 2D-Quadratur; PFT-Grenzfall |
+| F1-2 | #3 | `sft.py` / `selection.py` | Minimax-Anpassung der Krümmung c für gegebenes ψ (Kap. 7.4) | Beispiel aus 7.5: c = −521 mm⁻², Restgradient 230 mm⁻¹ |
+| F1-3 | #4 | `pft.py` | inverse PFT, Summe über mehrere stationäre Punkte, Warnung bei kleinem F | Hin- und Rück-PFT einer sphärischen Welle; Konvergenz O(1/F) |
+| F1-4 | #1 | `focus.py` | Debye-Integral (Gl. debye) per FFT mit subpixelgewichteter k-Berandung und Nullauffüllung | Airy-Integral; T4: Abweichung von Rayleigh-Sommerfeld wächst mit fallendem N_F |
+| F1-5 | #5 | `edge.py` | 2D-Randintegral (Gl. bdw), kritische Punkte 2. Art, Ecken | Kreisblende und Rechteckblende gegen 2D-Quadratur; Ordnung k^−1/2 bzw. k^−1 |
+| F1-6 | #6 | `lpia.py` | LPIA-Schritt an einer Sphäre mit Strahlnetz, Energiebilanz nach Gl. interface_amplitude | Ebene Welle durch eine Planfläche = Fresnel; Fluss bleibt mit R + T = 1 erhalten |
+| F1-7 | #7 | `semiclassical.py` | Maslov-Index am Punktfokus (μ = 2) und an Brennlinien in 2D | 2D-Winkelspektrum: Phasensprung −π bzw. −π/2 |
 
 ## Entscheidungen
 
@@ -66,7 +66,7 @@ Alle angenommen vom Maintainer am 2026-10-29.
 | E2 | Format der Sollwertdateien für den Port | JSON im Ergebnisformat `raytatouille-result` (ADR 0023 von Raytatouille) |
 | E3 | Ort in Raytatouille | neue Bibliothek `rtt-field` in der Schicht Auswertung, oberhalb von `rtt-analysis`; die Reihenfolge legt dort ein ADR fest (Begründung in `docs/integration-raytatouille.md`) |
 | E4 | Erster Integrationspunkt in Raytatouille | Vektor-Debye-PSF aus der Jones-Pupille (schließt die in ADR 0033 ausgelassene Vektor-PSF und die √cos-Faktoren); danach Felder in beliebigen Ebenen mit SFT |
-| E5 | GitHub-Issues für F1 | werden angelegt, sobald ein auf dieses Repository beschränktes Token vorliegt; Reihenfolge siehe unten |
+| E5 | GitHub-Issues für F1 | angelegt am 2026-10-29 (#1–#7); Reihenfolge siehe unten |
 
 Weitere Festlegungen vom selben Tag:
 
@@ -76,9 +76,9 @@ Weitere Festlegungen vom selben Tag:
 
 ### Reihenfolge der F1-Issues
 
-1. F1-4 (Debye-Fokus), weil der erste Integrationspunkt (E4) darauf aufbaut; parallel dazu
-   F1-1 und F1-2 (allgemeine SFT, Minimax-Krümmung), weil davon die SFT bei hoher NA abhängt.
-2. Danach F1-3, F1-5, F1-6 und F1-7.
+1. F1-4 (#1, Debye-Fokus), weil der erste Integrationspunkt (E4) darauf aufbaut; parallel dazu
+   F1-1 (#2) und F1-2 (#3) (allgemeine SFT, Minimax-Krümmung), weil davon die SFT bei hoher NA abhängt.
+2. Danach F1-3 (#4), F1-5 (#5), F1-6 (#6) und F1-7 (#7).
 
 ## Risiken
 
