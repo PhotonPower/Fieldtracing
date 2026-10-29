@@ -49,6 +49,12 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   unstrukturierten Strahlwolken (Delaunay, Obskurationen, quadratische Ausgleichsrechnung,
   Fehler O(h²)) (#18).
 
+- `chain`: einheitliche Operatoren mit Protokoll (Gl. system_chain, Tabelle tab:chaining):
+  `geometric_propagation` (Hesse- oder Maschen-Jacobi), `lpia_surface` auf Punktwolken,
+  `aperture` (`CircularAperture`, `RectangularAperture`), `pft`/`inverse_pft`,
+  `angular_spectrum` (Punktwolke, Gitter, SFT-Gitter), `sft`/`inverse_sft`, `fft`/`inverse_fft`,
+  `resample`, `run_chain`; `GriddedField` mit `domain` und `lattice` (#19).
+
 ### Behoben
 
 - `semiclassical.propagate_2d`: Die Strahlabbildung ∂ρ₂/∂ρ₁ wurde transponiert gebildet
