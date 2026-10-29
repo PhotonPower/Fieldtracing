@@ -99,6 +99,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   `chain.airy_alias_error`; `plan_propagation` mit `focus_window` und den Budgettermen
   `phase_taylor` und `aliasing`, `focus_samples` standardmäßig aus dem Fenster.
 
+- Beispiel 7.5, verkleinertes System gegen direkte Rayleigh-Sommerfeld-Quadratur an Fokus und
+  Zwischenebene (#42).
+
 ### Geändert
 
 - `chain.debye` nimmt am Rand der k-Scheibe den nächsten Strahlwert statt 0; der Rand der

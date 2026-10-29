@@ -46,3 +46,26 @@ Zwei neue Budgetterme in `plan_propagation` (#40): der Fehler der Taylor-Phase
 Wege, die die Phase zwischen Proben auswerten, und die periodischen Kopien beim Debye-Weg
 (`aliasing`, aus `focus_window`). Bei 40 statt 80 Ringen ist die Taylor-Phase der größte reale
 Fehler (4·10⁻⁴ im Fokus).
+
+## Verkleinertes System gegen direkte Rayleigh-Sommerfeld-Rechnung (#42)
+
+Gleiche NA 0,5 und dieselbe aplanatische Linse, kleinere Blende a. Bei gleicher NA wächst f mit
+a, also N_F = a²/(λf) ∝ a: Das Paper nennt für eine um den Faktor 10 kleinere Apertur N_F ≈ 144;
+richtig sind 1443 (Korrektur in #43). Direkte Rayleigh-Sommerfeld-Quadratur über die
+Blendenscheibe kostet bei a = 1,25 mm etwa 10⁹ Knoten je Zielpunkt; geprüft werden daher
+a = 0,1 mm (N_F = 115) und a = 0,2 mm (N_F = 231). Referenz: geschlossenes aplanatisches
+Austrittsfeld, Gauß-Legendre in r (exakte Kante), Trapez in φ; bei 1,4-facher Knotenzahl
+ändert sich der Wert um < 10⁻¹².
+
+| a (N_F) | Ebene | ε | Planer | Punkte | Budget | gemessen außerhalb der Achszone | in der Achszone |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 0,1 mm (115) | f/2 | 4 % | SFT, q = 10 | 628² | 4,0 % | 2,9 % | 6,0 % |
+| 0,2 mm (231) | f/2 | 2 % | SFT, q = 20 | 2510² | 2,0 % | ≈ 0,4 % | ≈ 2,5 % |
+| 0,1 mm (115) | Fokus | 4 % | Debye, n = 32 | 128² | 1,7 % | 0,28 % | – |
+| 0,2 mm (231) | Fokus | 2 % | Debye, n = 48 | 192² | 0,85 % | 0,15 % | – |
+
+Im Fokus dominiert der Debye-Term 1,5/N_F des Budgets; gemessen ist er etwa fünfmal kleiner,
+weil 1,5/N_F auf der Achse durch den Fokus gemessen wurde (T4) und in der Fokusebene selbst
+kleiner ist. In der Zwischenebene gilt das Budget außerhalb der Achszone (Kaustik der
+Kantenwelle, #31); innen liegen die Fehler wie beim System mit kleiner NA darüber. Laufzeiten
+(ein Kern): a = 0,2 mm, f/2: SFT-Kette 24 s, Referenz 2,5 s je Punkt.
