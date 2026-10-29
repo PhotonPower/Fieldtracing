@@ -37,7 +37,7 @@ Leitlinien, die sich aus dem Ziel ergeben:
 | **F2 Hybride Darstellung und Verkettung** (#17–#21) ✅ | `GridlessField`/`GriddedField` mit Verhalten, Übergänge Punktwolke ↔ Gitter, Jacobi-Faktor aus Maschenflächen, Auswahlregeln als Planer, Operatorkette | Kette Linse → Blende → Ebene stimmt mit dem Winkelspektrum innerhalb der Toleranzen aus Tabelle 7.3 |
 | **F3 Integrationstest Kapitel 7.5** (#39–#43) ✅ | Beispiel D = 25 mm, NA 0,5: Fokus und Zwischenebene; verkleinertes System gegen direkte Rayleigh-Sommerfeld-Rechnung; vektoriell mit Richards-Wolf | Abweichungen und Punktzahlen dokumentiert; Paper bei Abweichungen korrigiert |
 | **F4 Brücke zu Raytatouille (lesend)** (#22–#25) ✅ | Adapter: Strahldaten aus der Python-API von Raytatouille → `GridlessField` (Phase aus OPL, Amplitude aus weight und Maschen, Polarisation aus PRT) | Debye-Fokus aus Raytatouille-Strahlen = FFT-PSF von Raytatouille bei kleiner NA; Abweichungen bei hoher NA erklärt (√cos, Vektor) |
-| **F5 Integrationsvorschlag** (#50–#53) | ADR-Entwurf `rtt-field`, API-Skizze, Sollwertdateien für den Port, Issue-Entwürfe im Format von Raytatouille | Freigabe durch den Maintainer |
+| **F5 Integrationsvorschlag** (#50–#53) ✅ | ADR-Entwurf `rtt-field`, API-Skizze, Sollwertdateien für den Port, Issue-Entwürfe im Format von Raytatouille | Freigabe durch den Maintainer |
 | F6 Port (in Raytatouille) | C++-Bibliothek nach Freigabe, nach den Regeln von Raytatouille | dort |
 
 F1 und F4 sind unabhängig voneinander; F2 braucht F1; F3 braucht F2; F5 braucht F3 und F4.
@@ -109,8 +109,8 @@ Meilenstein „F5 Integrationsvorschlag“ auf GitHub. Alles entsteht als Dokume
 Reihenfolge: #50, dann #51 und #52, zuletzt #53.
 
 Stand 2026-10-29: alle vier Teile gemergt (Sollwertdateien `reference/field/`, ADR-Entwurf,
-API-Skizze und Issue-Entwürfe unter `docs/rtt-port/`). **Offen ist die Abnahme: Freigabe durch
-den Maintainer.** Danach beginnt F6 (Port in Raytatouille) nach dessen Prozess, mit den
+API-Skizze und Issue-Entwürfe unter `docs/rtt-port/`). **Abgenommen: Freigabe durch den Maintainer
+am 2026-10-30 (E6).** Damit kann F6 (Port in Raytatouille) nach dessen Prozess beginnen, mit den
 Entwürfen 0 und 1 aus `docs/rtt-port/issues.md` als erste Fragen.
 
 ## F4 im Detail
@@ -140,6 +140,7 @@ Alle angenommen vom Maintainer am 2026-10-29.
 | E3 | Ort in Raytatouille | neue Bibliothek `rtt-field` in der Schicht Auswertung, oberhalb von `rtt-analysis`; die Reihenfolge legt dort ein ADR fest (Begründung in `docs/integration-raytatouille.md`) |
 | E4 | Erster Integrationspunkt in Raytatouille | Vektor-Debye-PSF aus der Jones-Pupille (schließt die in ADR 0033 ausgelassene Vektor-PSF und die √cos-Faktoren); danach Felder in beliebigen Ebenen mit SFT |
 | E5 | GitHub-Issues für F1 | angelegt am 2026-10-29 (#1–#7); Reihenfolge siehe unten |
+| E6 | Integrationsvorschlag F5 (ADR-Entwurf `rtt-field`, API-Skizze, Sollwertdateien, Issue-Entwürfe, PSF-Frage) | freigegeben am 2026-10-30; die Übernahme nach Raytatouille (ADR-Nummer, Issues, Sollwerte) geschieht dort nach dessen Prozess; Raytatouille bleibt für dieses Repository nur lesbar (Regel 8) |
 
 Weitere Festlegungen vom selben Tag:
 

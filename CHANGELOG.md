@@ -127,6 +127,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 
 ### Geändert
 
+- F5 abgenommen: Integrationsvorschlag vom Maintainer freigegeben (E6); Vermerk in Roadmap und
+  in den Entwürfen unter `docs/rtt-port/` sowie `docs/rtt-entwurf-psf-hohe-na.md`.
+
 - Beispiel 7.5: volle Rechnung der Zwischenebene nachgetragen (5,28 GB, 333 s, Intensität gegen
   Geometrie 4,6·10⁻³) in `docs/beispiel-7-5.md`, Paper Abschnitt 7.5 und Roadmap (#41).
 

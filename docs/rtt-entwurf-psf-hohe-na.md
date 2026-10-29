@@ -3,6 +3,9 @@
 > Entwurf aus Fieldtracing (#25, überarbeitet in #60). Nicht in Raytatouille angelegt; Entscheidung
 > beim Maintainer (Fieldtracing AGENTS.md, Regel 8). Stand Raytatouille: Commit aus
 > `rtt-commit.txt`. Vorlage: `.github/ISSUE_TEMPLATE/aufgabe.md` bzw. `frage.md`.
+>
+> **Freigegeben** vom Maintainer von Fieldtracing am 2026-10-30 (Entscheidung E6 in
+> `docs/roadmap.md`); Übernahme nach Raytatouille dort nach dessen Prozess.
 
 **Titel:** [Frage] analysis: FFT-PSF bei großem δ_max der Pupillenzuordnung – warnen, ablehnen
 oder richtig zuordnen?

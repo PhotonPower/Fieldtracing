@@ -4,8 +4,11 @@
 > AGENTS.md Regel 8); Nummer und Annahme vergibt der Maintainer von Raytatouille. Stand
 > Raytatouille: Commit `f77b9cd` (Version 0.8.0). Belege in Fieldtracing: `docs/testfaelle.md`,
 > `docs/vergleich-psf.md`, `docs/beispiel-7-5.md`, ADR 0004, Sollwertdateien `reference/field/`.
+>
+> **Freigegeben** vom Maintainer von Fieldtracing am 2026-10-30 (Entscheidung E6 in
+> `docs/roadmap.md`); Übernahme nach Raytatouille dort nach dessen Prozess.
 
-**Status:** vorgeschlagen
+**Status:** vorgeschlagen (für Raytatouille; in Fieldtracing freigegeben am 2026-10-30)
 
 ## Kontext
 
