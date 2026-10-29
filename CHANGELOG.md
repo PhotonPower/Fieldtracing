@@ -22,6 +22,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   `check_sft_sampling` mit `SamplingWarning`, `region_weights` für beliebige Blendenformen;
   pytest-Marker `slow` und nächtlicher Workflow (#2).
 
+- `selection.fit_curvature_radial`, `selection.fit_curvature` (Minimax als lineares Programm) und
+  `selection.sft_samples`; reproduziert die Werte aus Abschnitt 7.5 des Papers (#3).
+
 ### Geändert
 
 - Entscheidungen E1–E5 und ADR 0001–0003 angenommen (`docs/roadmap.md`).
