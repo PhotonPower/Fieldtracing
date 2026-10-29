@@ -414,3 +414,9 @@ Bericht mit Bild: `docs/vergleich-psf.md`.
 - Debye aus der Wolke (120 Ringe, `chain.debye`, n = 256) gegen `richards_wolf`: 1,3·10⁻⁵
   (NA 0,5) und 3,3·10⁻⁵ (NA 0,9) relativ zum Maximum; bei 1,2 λ Defokus 1,8·10⁻⁴, weil
   `chain.debye` die Referenzkugel auf die Zielebene legt, Richards-Wolf auf den Fokus.
+
+## Beispiel 7.5: Fokus des großen Systems (Issue #40)
+
+Bericht: `docs/beispiel-7-5.md`. Kennzahlen des Planers wie im Paper (h, w, N_F, F_a, kantennahe
+Zone); Debye-Kette mit 19 441 Strahlen und n = 78 gegen `focus.richards_wolf` im Fenster
+L_F = 20 µm: 6,5·10⁻⁴ relativ zum Maximum, Budget 5,4·10⁻³.
