@@ -150,3 +150,33 @@ Faktor exp(−iπμ/2) läge die Vorhersage um mehr als die halbe Amplitude dane
 Wichtig für die Wahl der Testfälle: Die geometrische Näherung braucht eine große Fresnel-Zahl
 des defokussierten Strahls, a²·δ/(λ f²) mit dem Abstand δ von der jeweiligen Brennlinie. Bei
 einer ersten Wahl (a = 0,4 mm, δ = 10 mm, f = 50 mm) war sie ≈ 1, und die Fehler lagen bei 30 %.
+
+## Blenden in 2D: Randintegral und kritische Punkte (Issue #5)
+
+Skalierung ψ → sψ, k → sk (gleiche Strahlen, s-fache Wellenzahl), s = 1 und 4. Fehler relativ
+zum exakten Wert.
+
+**Kreisscheibe** (R = 0,5 mm, ψ = c|ρ|²/2, c = 3000 mm⁻², U = 1) gegen Hankel-Quadratur:
+
+| \|k\|/(cR) | PFT + Randintegral (numerisch) | PFT + Punkte 2. Art, s = 1 | s = 4 |
+| --- | --- | --- | --- |
+| 0,5 (beleuchtet) | < 10⁻¹² | 1,6·10⁻⁴ | 1,9·10⁻⁵ |
+| 0,9 (nahe Rand) | < 10⁻¹² | 1,6·10⁻² | 2,2·10⁻³ |
+| 1,2 (Schatten) | < 10⁻¹² | 3,6·10⁻² | 8,7·10⁻³ |
+
+Für U = 1 und isotropes H ist das Randintegral exakt: Das Feld ∇Φ/|∇Φ|² ist in 2D quellenfrei,
+der vernachlässigte Term ∬ e^(iΦ) ∇·F verschwindet.
+
+**Rechteck** (Halbbreiten 0,5 und 0,3 mm, Sattelphase c_x = 2000, c_y = −1500 mm⁻²) gegen das
+Produkt zweier Fresnel-Integrale:
+
+| k/(c·a) | Region | Randintegral numerisch, s = 1 → 4 | kritische Punkte, s = 1 → 4 |
+| --- | --- | --- | --- |
+| (0,2; 0,3) | beleuchtet | 1,7·10⁻³ → 1,9·10⁻⁴ | 7,3·10⁻⁴ → 7,9·10⁻⁵ |
+| (1,3; 0,2) | Schatten in x, Punkte 2. Art | 4,4·10⁻² → 8,8·10⁻³ | 2,5·10⁻² → 5,0·10⁻³ |
+| (1,4; 1,5) | nur Ecken (3. Art) | 7,3·10⁻³ → 2,3·10⁻³ | 1,2·10⁻² → 5,0·10⁻³ |
+| (0,5; 0,9) | nahe Schattengrenze in y | 21 % → 4,7 % | 14 % → 2,3 % |
+
+Im beleuchteten Bereich ist die PFT allein über 10-mal schlechter als mit Kanten und Ecken. Nahe
+einer Schattengrenze versagt die Randdarstellung (|∇Φ| → 0 am Rand); dort braucht es die
+gleichmäßige Lösung, in 2D noch offen.

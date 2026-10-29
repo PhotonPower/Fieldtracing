@@ -31,6 +31,10 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 - Tests für den Maslov-Index in 2D (Punktfokus, astigmatische Brennlinien) gegen das
   Winkelspektrum, mit Konvergenz O(1/k) als `slow` (#7).
 
+- `edge.boundary_integral` (Gl. bdw) mit Knoten für Polygone und Kreise sowie
+  `edge.polygon_asymptotics` und `edge.circle_asymptotics` über kritische Punkte 2. und 3. Art
+  (#5).
+
 ### Geändert
 
 - Paper: Gültigkeitsgrenze der Debye-Näherung quantifiziert (≈ 1,5/N_F statt N_F ≲ 10),
