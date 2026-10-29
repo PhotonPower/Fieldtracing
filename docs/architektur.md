@@ -8,7 +8,7 @@
 | `fourier` | Fourier-Konvention auf zentrierten Gittern | Gl. ft_convention |
 | `propagation` | Winkelspektrum, Rayleigh-Sommerfeld-Kern, Van-Vleck-Kern | Gl. spw, rs_kernel, van_vleck |
 | `semiclassical` | geometrische Propagation, Jacobi-Faktor, Maslov-Index | Abschnitt 3.4, Gl. jacobian_amplitude |
-| `pft` | punktweise Fourier-Transformation | Abschnitt 4, Gl. pft_final |
+| `pft` | punktweise Fourier-Transformation, invers, Summe über mehrere stationäre Punkte (1D), Gültigkeitswarnung | Abschnitt 4, Gl. pft_final |
 | `sft` | semi-analytische Fourier-Transformation (1D, 2D für allgemeines C, invers), Abtastprüfung, Blendengewichte für beliebige Gebiete | Abschnitt 6.4, Gl. sft_formula |
 | `edge` | Kantenwelle, gleichmäßige erfc-Lösung | Abschnitt 6.1, Gl. keller_gtd, fresnel_edge |
 | `focus` | sphärische Austrittsphase, exakte Legendre-Transformation, Airy-Integral, Debye-Fokus per FFT (`debye_focus`, skalar und vektoriell) | Abschnitt 5.3, Gl. debye |
