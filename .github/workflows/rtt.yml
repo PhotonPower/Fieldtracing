@@ -1,0 +1,75 @@
+name: Raytatouille
+
+# Tests with the marker `rtt` against Raytatouille (read only, AGENTS.md rule 8). Raytatouille is
+# built from its repository at the commit in rtt-commit.txt (the only place of the pin) with
+# vcpkg, as in its README and CI. The built wheel is cached per commit and Python version.
+
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - rtt-commit.txt
+      - .github/workflows/rtt.yml
+      - tests/conftest.py
+      - tests/test_rtt*.py
+      - src/fieldtracing/rtt_bridge.py
+
+jobs:
+  rtt:
+    name: pytest -m rtt
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      PYTHON_VERSION: "3.12"
+      VCPKG_ROOT: ${{ github.workspace }}/../vcpkg
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/../vcpkg-cache
+      RAYTATOUILLE_SOURCE: ${{ github.workspace }}/../raytatouille
+      FIELDTRACING_REQUIRE_RTT: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Raytatouille commit
+        id: pin
+        run: echo "commit=$(tr -d '[:space:]' < rtt-commit.txt)" >> "$GITHUB_OUTPUT"
+      - name: Check out Raytatouille
+        run: |
+          git clone -q https://github.com/PhotonPower/Raytatouille.git "$RAYTATOUILLE_SOURCE"
+          git -C "$RAYTATOUILLE_SOURCE" checkout -q "${{ steps.pin.outputs.commit }}"
+          echo "VCPKG_COMMIT=$(python -c "import json,sys; print(json.load(open(sys.argv[1]))['builtin-baseline'])" "$RAYTATOUILLE_SOURCE/vcpkg.json")" >> "$GITHUB_ENV"
+          echo "WHEEL_DIR=${{ github.workspace }}/../rtt-wheel" >> "$GITHUB_ENV"
+      - name: Restore wheel cache
+        id: wheel
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.WHEEL_DIR }}
+          key: rtt-wheel-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ steps.pin.outputs.commit }}
+      - name: Install tools
+        if: steps.wheel.outputs.cache-hit != 'true'
+        run: sudo apt-get -o Acquire::Retries=3 update -q && sudo apt-get -o Acquire::Retries=3 install -y -q ninja-build
+      - name: Restore vcpkg binary cache
+        if: steps.wheel.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: rtt-vcpkg-${{ runner.os }}-${{ env.VCPKG_COMMIT }}
+      - name: Build Raytatouille wheel
+        if: steps.wheel.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$VCPKG_DEFAULT_BINARY_CACHE" "$WHEEL_DIR"
+          git clone -q https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
+          git -C "$VCPKG_ROOT" checkout -q "$VCPKG_COMMIT"
+          "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+          python -m pip install -r "$RAYTATOUILLE_SOURCE/libs/rtt-py/tests/requirements.txt"
+          export CMAKE_ARGS="-DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-linux -G Ninja"
+          python -m pip wheel --no-deps -w "$WHEEL_DIR" "$RAYTATOUILLE_SOURCE" -v
+      - name: Install
+        run: |
+          pip install -r requirements-dev.txt && pip install -e .
+          pip install --no-deps "$WHEEL_DIR"/raytatouille-*.whl
+          python -c "import raytatouille as rt; print(rt.__version__, rt.__file__)"
+      - name: pytest -m rtt
+        run: pytest -q -m rtt -rs

@@ -342,3 +342,13 @@ beliebiger Orientierung und Länge, dazu senkrechter Einfall: Abweichung < 10⁻
 
 Laufzeit (ein Kern): Schleife 7,7·10³ Strahlen/s, vektorisiert 9,8·10⁵ Strahlen/s, Faktor ≈ 130;
 `trace_surface` mit 10⁶ Strahlen durch eine Sphäre (30 Newton-Schritte) 3 s statt etwa 130 s.
+
+## Rauchtest gegen Raytatouille (Issue #22, Marker `rtt`)
+
+Plankonvexe Einzellinse `m1/singlet_const.rtt.json` von Raytatouille (Commit aus
+`rtt-commit.txt`), drei Strahlen des Achsfeldes (Pupille (0, 0), (0, 0,5), (0,3, 0,2)), gegen
+eine Strahlrechnung in geschlossener Form mit `lpia.refract` und den absoluten Brechzahlen des
+kompilierten Systems: Landepunkt < 10⁻¹⁰ mm, Richtung < 10⁻¹², OPL ab der Startebene < 10⁻¹⁰ mm;
+Gewicht auf der Achse = T₁·T₂ aus den Fresnel-Koeffizienten (Convention A), relativ < 10⁻¹².
+Beim ersten Versuch mit Luft = 1 wich die OPL um 0,028 mm ab: Raytatouille rechnet mit
+Ciddor-Luft (n = 1,000272 bei 0,5876 µm).

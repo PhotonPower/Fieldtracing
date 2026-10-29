@@ -17,6 +17,38 @@ Raytatouille; Entscheidungen trifft dort der Maintainer (AGENTS.md, Regel 8).
 | Konventionen | mm, µm, rad; exp(i(k·r − ωt)); +z; Convention A | identisch zu `docs/konventionen.md` |
 | Prozess | ADR je Entscheidung, Test zuerst mit analytischem Sollwert, Formel mit Quelle und Gleichungsnummer, Changelog-Fragmente, Koordinator und Implementierer je Issue | Port-Issues werden in diesem Format vorbereitet |
 
+## Raytatouille lesend nutzen (F4, #22)
+
+Raytatouille ist eine **optionale** Abhängigkeit für die Tests mit dem Marker `rtt`. Der Commit
+steht an genau einer Stelle: `rtt-commit.txt` (derzeit `f77b9cd`, Version 0.8.0). Ohne
+installiertes Paket werden diese Tests übersprungen; die Standard-CI bleibt unverändert.
+
+Installation (Linux, wie Raytatouilles README und CI):
+
+```bash
+git clone https://github.com/PhotonPower/Raytatouille.git ../raytatouille
+git -C ../raytatouille checkout "$(cat rtt-commit.txt)"
+# a) mit vcpkg (wie die CI von Raytatouille; Commit = builtin-baseline in dessen vcpkg.json)
+export CMAKE_ARGS="-DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -G Ninja"
+# b) oder mit Systempaketen (Ubuntu 24.04):
+#    sudo apt-get install cmake ninja-build g++ libeigen3-dev nlohmann-json3-dev libtbb-dev
+#    export CMAKE_ARGS="-G Ninja"   (pocketfft lädt CMake am festen Commit nach)
+pip install -r ../raytatouille/libs/rtt-py/tests/requirements.txt
+pip install ../raytatouille
+RAYTATOUILLE_SOURCE=../raytatouille pytest -m rtt
+```
+
+`RAYTATOUILLE_SOURCE` zeigt auf den Checkout, damit Tests die Referenzmodelle aus
+`tests/reference` laden können. Der Workflow `.github/workflows/rtt.yml` (nächtlich, manuell und
+bei PRs, die die Brücke berühren) baut das Rad mit vcpkg, cacht vcpkg-Binärpakete und das Rad je
+Commit und setzt `FIELDTRACING_REQUIRE_RTT=1`: dann ist ein fehlendes Paket ein Fehler statt
+eines übersprungenen Tests.
+
+Wichtig für die Brücke: Raytatouilles Brechzahlen sind **absolut** (`AIR` = Ciddor-Luft,
+n ≈ 1,00027 bei 0,5876 µm); OPL und Weglängen in Luft tragen diesen Faktor. Fieldtracing rechnet
+mit der Brechzahl des Mediums im Feld (`refractive_index`), also ebenfalls absolut, wenn man sie
+aus dem kompilierten System übernimmt.
+
 ## Integrationspunkte, nach Nutzen und Aufwand
 
 1. **I1 Vektorielle Debye-PSF** aus der Jones-Pupille (ADR 0034): Kette PFT → Winkelspektrum → FFT

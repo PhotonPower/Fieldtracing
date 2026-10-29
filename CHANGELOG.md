@@ -65,6 +65,11 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   `chain.debye` und `chain.rayleigh_sommerfeld`. Integrationstest Linse → Kreisblende → Ebene
   gegen direkte Rayleigh-Sommerfeld-Quadratur; Abweichungen zum Paper in #31.
 
+- Raytatouille als optionale Abhängigkeit (#22): Commit-Pin `rtt-commit.txt`, pytest-Marker
+  `rtt` (ohne Paket übersprungen, mit `FIELDTRACING_REQUIRE_RTT=1` ein Fehler), Workflow
+  `rtt.yml` mit vcpkg- und Rad-Cache, Rauchtest an der Einzellinse aus Raytatouilles
+  Referenzmodellen.
+
 ### Behoben
 
 - `semiclassical.propagate_2d`: Die Strahlabbildung ∂ρ₂/∂ρ₁ wurde transponiert gebildet

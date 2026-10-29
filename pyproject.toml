@@ -27,7 +27,10 @@ fieldtracing = ["py.typed"]
 testpaths = ["tests"]
 # Expensive reference computations carry the marker `slow`; run them with `pytest -m slow`.
 addopts = "-ra -m 'not slow'"
-markers = ["slow: expensive reference computation (nightly workflow, pytest -m slow)"]
+markers = [
+    "slow: expensive reference computation (nightly workflow, pytest -m slow)",
+    "rtt: needs the raytatouille package (workflow rtt.yml); skipped if it is not installed",
+]
 
 [tool.ruff]
 line-length = 100
@@ -43,8 +46,8 @@ python_version = "3.10"
 files = ["src", "tests"]
 
 [[tool.mypy.overrides]]
-# SciPy ships no type information.
-module = ["scipy", "scipy.*"]
+# SciPy ships no type information; raytatouille is optional (typed when installed).
+module = ["scipy", "scipy.*", "raytatouille", "raytatouille.*"]
 ignore_missing_imports = true
 
 [tool.ruff.lint.per-file-ignores]
