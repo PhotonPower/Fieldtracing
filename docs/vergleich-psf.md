@@ -64,6 +64,38 @@ Die Unterschiede zerlegen sich in drei Ursachen:
    und liegt neben der Achse in Polarisationsrichtung; der Fleck wird längs x breiter (0,36 µm)
    als quer (0,24 µm). Bei NA 0,5 sind es 7 % und 6 % Unterschied der Breiten.
 
+## Ursache geklärt: Sinusbedingung (#60)
+
+**Im Code von Raytatouille** (nur gelesen; ADR 0032 Punkt 4, `libs/rtt-analysis/src/pupil.cpp`):
+Die Zuordnung s ≈ s₀ + M p ist M = ∂s/∂p bei p = 0, aus zentralen Differenzen an vier
+parabasalen Strahlen (δ = 10⁻³). M ist also der paraxiale Maßstab n′|u′|. Das ADR nennt die
+Grenze selbst: Die Zuordnung ist genau dann linear, wenn das System die Sinusbedingung erfüllt.
+Die Kennzahl δ_max misst die Abweichung, über 10⁻² warnt `pupil.mapping_nonlinear`; die PSF wird
+trotzdem gerechnet. Die ideale Linse von Raytatouille ist kollinear (tan θ = h/f), verletzt die
+Sinusbedingung also maximal: M = tan θ_max = 2,065 bei NA 0,9, δ_max = 0,56.
+
+**Nachmessung an einem korrigierten Objektiv:** Raytatouilles Beispiel Mikroskopobjektiv 20x/0,45
+(`examples/komplexe_modelle/mikroskopobjektiv_20x`, rückwärts auf das Präparat gerechnet,
+NA 0,45 im Bildraum, 20 Flächen, NIKON-HIKARI-Gläser). Fieldtracing: `debye_psf` mit
+Austrittsebene 0,46 mm vor dem Präparat, 60 Ringe, n = 128.
+
+| Größe | Raytatouille (FFT, skalar) | Fieldtracing (Debye, vektoriell) |
+| --- | --- | --- |
+| δ_max der Pupillenzuordnung | 0,0021 (keine Warnung) | – |
+| Strehl (monochromatisch, 0,5876 µm) | 0,99243 | 0,99243 |
+| FWHM quer zur Polarisation | 0,672 µm | 0,672 µm (Profil < 2·10⁻⁴) |
+| FWHM längs der Polarisation | 0,672 µm | 0,698 µm (+3,8 %, E_z trägt 5,4 %) |
+| Airy-Formel 0,514 λ/NA | 0,673 µm | |
+
+Ein korrigiertes Objektiv erfüllt die Sinusbedingung fast; dann stimmen beide Rechnungen überein,
+bis auf den Vektoranteil. Die Abweichung bei der idealen Linse ist also keine Schwäche der FFT,
+sondern die dokumentierte Grenze der affinen Zuordnung, ausgelöst durch die kollineare ideale
+Linse.
+
+**Stolperstein beim Vergleich:** `analysis.psf` rechnet ohne `wavelengths` polychromatisch über alle
+Systemwellenlängen. Beim Objektiv (F, d, C) ergibt das Strehl 0,973 statt 0,992; verglichen
+wird deshalb mit `wavelengths=[reference]`. Die übrigen Fälle oben haben nur eine Wellenlänge.
+
 ## Folgerungen für den Integrationspunkt E4
 
 - Bei kleiner NA liefert die Debye-Kette aus Raytatouille-Strahlen dasselbe wie Raytatouilles
@@ -71,5 +103,6 @@ Die Unterschiede zerlegen sich in drei Ursachen:
 - Bei hoher NA ist Raytatouilles skalare FFT-PSF für Systeme mit stark nichtlinearer
   Pupillenabbildung nicht verwendbar (Warnung `pupil.mapping_nonlinear`); die vektorielle
   Debye-PSF aus den Strahlen braucht keine Pupillenabbildung, weil sie die Richtungen der
-  Strahlen selbst verwendet. Ein Issue-Entwurf für Raytatouille steht in
+  Strahlen selbst verwendet. Für korrigierte Systeme (Sinusbedingung) ist die FFT-PSF dagegen
+  richtig. Ein überarbeiteter Issue-Entwurf für Raytatouille steht in
   `docs/rtt-entwurf-psf-hohe-na.md` (nicht dort angelegt, AGENTS.md Regel 8).

@@ -4,7 +4,9 @@ Small NA (plano-convex singlet f = 100 mm, NA 0.05, spherical aberration; Raytat
 `m6/planoconvex_f10`): Strehl ratio and PSF profile agree with `psf`/`psf_at`. High NA (ideal
 lens, NA 0.9): the differences are explained (docs/vergleich-psf.md): Raytatouille maps the pupil
 affinely onto the direction sines with the slope tan θ_max of the collinear lens, so its PSF is
-narrower by tan θ/sin θ; the vector field is elongated along the polarization.
+narrower by tan θ/sin θ; the vector field is elongated along the polarization. Corrected
+objective (Raytatouille's 20x/0.45, sine condition almost fulfilled, #60): mapping nearly linear,
+Strehl and the profile across the polarization agree.
 """
 
 from __future__ import annotations
@@ -133,3 +135,37 @@ def test_high_na_differences_are_explained(tmp_path: Path) -> None:
     fw_uniform = _fwhm(uniform.x[cu:], prof)  # scalar, uniform in direction sines up to NA
     tan_over_sin = 1.0 / np.cos(np.arcsin(na))
     assert fw_rt * tan_over_sin == pytest.approx(fw_uniform, rel=0.03)
+
+
+def test_corrected_objective_agrees(rtt_reference_dir: Path) -> None:
+    # Raytatouille's 20x/0.45 microscope objective (computed backwards onto the specimen, NA 0.45
+    # in image space): a corrected design almost fulfils the sine condition, so Raytatouille's
+    # affine pupil mapping is nearly exact (δ_max ≈ 0.002). Monochromatic comparison: `psf`
+    # defaults to all system wavelengths.
+    import raytatouille as rt
+
+    source = rtt_reference_dir.parents[1]
+    materials = rt.MaterialLibrary()
+    materials.add_catalog(source / "tests" / "catalogs" / "nikon" / "nikon-hikari.agf")
+    model = source / "examples" / "komplexe_modelle" / "mikroskopobjektiv_20x.rtt.json"
+    system = rt.compile(rt.load(model), materials=materials)
+    ref_wl = system.reference_wavelength
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # no pupil.mapping_nonlinear here
+        pupil = rt.analysis.pupil_function(system, field=0, grid=256)
+        rt_strehl = float(rt.analysis.psf(system, field=0, grid=256, wavelengths=[ref_wl]).strehl)
+    assert pupil.mapping is not None and pupil.mapping.delta_max < 0.01
+    focal, strehl = debye_psf(system, exit_z=33.75, rings=60, n=128, pad=8)
+    assert strehl == pytest.approx(rt_strehl, abs=1e-4)  # both 0.9924
+    x = focal.x
+    c = len(x) // 2
+    span = int(np.argmax(x[c:] > 3e-3))
+    r = x[c : c + span]
+    inten = np.sum(np.abs(focal.values) ** 2, axis=-1)
+    across = inten[c : c + span, c] / inten[c, c]  # y, perpendicular to the x polarization
+    along = inten[c, c : c + span] / inten[c, c]
+    ry = np.asarray(rt.analysis.psf_at(pupil, np.column_stack([np.zeros(span), r])))
+    assert np.max(np.abs(across - ry / ry[0])) < 1e-3
+    fw_rt, fw_along = _fwhm(r, ry), _fwhm(r, along)
+    assert _fwhm(r, across) == pytest.approx(fw_rt, rel=1e-3)
+    assert 1.02 < fw_along / fw_rt < 1.06  # vector: wider along the polarization

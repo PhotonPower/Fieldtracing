@@ -441,3 +441,11 @@ a = 2,5 mm (`slow`): Intensität gegen geometrische Propagation abseits von Kant
 im Test neu gerechnet und verglichen (`expected`, Toleranz je Fall), die unabhängigen Werte
 (`reference`) halten ihre physikalische Toleranz, die Kodierung ist bitgleich umkehrbar
 (−0,0, NaN, ±∞, uint8, komplex) und mit Marker `rtt` identisch zu Raytatouilles `encode_json`.
+
+## PSF-Vergleich, Ursache der Abweichung bei hoher NA (Issue #60)
+
+Raytatouilles Mikroskopobjektiv 20x/0,45 (Marker `rtt`): δ_max der Pupillenzuordnung 0,0021;
+Strehl monochromatisch 0,99243 (FFT) gegen 0,99243 (Debye aus Strahlen); FWHM quer zur
+Polarisation gleich (Profil < 10⁻³), längs +3,8 % (Vektoranteil). Die Abweichung bei der idealen
+Linse folgt aus der verletzten Sinusbedingung (kollineare Linse), wie ADR 0032 von Raytatouille
+dokumentiert. Bericht: `docs/vergleich-psf.md`.
