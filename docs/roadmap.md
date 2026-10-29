@@ -48,7 +48,7 @@ Je ein Issue pro Auftrag für einen Agenten, Meilenstein „F1 Bausteine 2D“ a
 
 | Nr. | Issue | Baustein | Inhalt | Referenz und Abnahme |
 | --- | --- | --- | --- | --- |
-| F1-1 | #2 | `sft.py` | `sft_2d` für symmetrisches C (Hauptachsen, Rotation des Gitters), inverse SFT | Separabler Fall = Produkt der 1D-SFT; gedrehtes C gegen direkte 2D-Quadratur; PFT-Grenzfall |
+| F1-1 | #2 | `sft.py` | `sft_2d` für symmetrisches C (Transferfunktion direkt mit C⁻¹, keine Gitterdrehung), inverse SFT, Marker `slow` | Separabler Fall = Produkt der 1D-SFT; gedrehtes C gegen direkte 2D-Quadratur; PFT-Grenzfall |
 | F1-2 | #3 | `sft.py` / `selection.py` | Minimax-Anpassung der Krümmung c für gegebenes ψ (Kap. 7.4) | Beispiel aus 7.5: c = −521 mm⁻², Restgradient 230 mm⁻¹ |
 | F1-3 | #4 | `pft.py` | inverse PFT, Summe über mehrere stationäre Punkte, Warnung bei kleinem F | Hin- und Rück-PFT einer sphärischen Welle; Konvergenz O(1/F) |
 | F1-4 | #1 | `focus.py` | Debye-Integral (Gl. debye) per FFT mit subpixelgewichteter k-Berandung und Nullauffüllung | Airy-Integral; T4: Abweichung von Rayleigh-Sommerfeld wächst mit fallendem N_F |
