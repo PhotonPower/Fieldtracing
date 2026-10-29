@@ -290,16 +290,21 @@ class GridlessField:
 
 @dataclass(frozen=True)
 class GriddedField:
-    """Field on a square centred grid with an analytic quadratic carrier phase.
+    """Field on a centred square grid with an analytic quadratic carrier phase.
 
-    The physical field is values·exp(i/2·ρᵀCρ); C = 0 is a plain grid.
+    The samples sit at p = L·u with u on the centred n×n grid of `step` (`lattice` L = identity:
+    a plain grid; the SFT produces the lattice k = C·ρ'). The physical field is
+    values·exp(i/2·pᵀCp); C = 0 is a plain grid.
 
     Attributes:
-        step: grid step in mm.
+        step: grid step of u (mm in space with L = I, 1/mm in frequency with L = I; with a
+            lattice the unit of u is that of p divided by the unit of L).
         values: (N, N, 3) complex samples, rows y, columns x.
         wavelength_um: vacuum wavelength in µm.
         refractive_index: index of the medium.
-        curvature: C (2, 2) in 1/mm².
+        curvature: carrier matrix C (2, 2), 1/mm² in space, mm² in frequency.
+        domain: "space" (p = ρ in mm) or "frequency" (p = k⊥ in 1/mm).
+        lattice: L (2, 2), maps the grid u to the sample positions p.
     """
 
     step: float
@@ -307,6 +312,8 @@ class GriddedField:
     wavelength_um: float
     refractive_index: float = 1.0
     curvature: FloatArray = field(default_factory=lambda: np.zeros((2, 2)))
+    domain: Domain = "space"
+    lattice: FloatArray = field(default_factory=lambda: np.eye(2))
 
     def __post_init__(self) -> None:
         shape = np.shape(self.values)
@@ -314,19 +321,43 @@ class GriddedField:
             raise ValueError("values must have shape (N, N, 3)")
         if np.shape(self.curvature) != (2, 2):
             raise ValueError("curvature must be a 2x2 matrix")
+        if np.shape(self.lattice) != (2, 2) or np.linalg.det(self.lattice) == 0.0:
+            raise ValueError("lattice must be an invertible 2x2 matrix")
+
+    @property
+    def k(self) -> float:
+        """Wavenumber n·k₀ of the medium in 1/mm."""
+        return wavenumber(self.wavelength_um, self.refractive_index)
 
     @property
     def x(self) -> FloatArray:
-        """Centred grid coordinates in mm."""
+        """Centred grid coordinates u (unit of `step`)."""
         return centered_grid(np.shape(self.values)[0], self.step)
 
-    def physical(self) -> ComplexArray:
-        """values·exp(i/2·ρᵀCρ); raises ValueError if the carrier is not resolved by the grid."""
+    @property
+    def plain(self) -> bool:
+        """True for an identity lattice (samples on the centred grid itself), up to rounding."""
+        return bool(np.allclose(self.lattice, np.eye(2), rtol=0.0, atol=1e-12))
+
+    def sample_points(self) -> FloatArray:
+        """(N, N, 2) sample positions p = L·u (mm in space, 1/mm in frequency)."""
         x = self.x
-        edge = float(np.max(np.abs(x)))
-        worst = float(np.max(np.abs(self.curvature))) * 2.0 * edge * self.step
+        grid = np.stack(np.meshgrid(x, x), axis=-1)
+        return np.asarray(np.einsum("ij,...j->...i", self.lattice, grid))
+
+    def carrier(self) -> FloatArray:
+        """(N, N) carrier phase ½pᵀCp in rad."""
+        p = self.sample_points()
+        return np.asarray(0.5 * np.einsum("...i,ij,...j->...", p, self.curvature, p))
+
+    def physical(self) -> ComplexArray:
+        """values·exp(i/2·pᵀCp); raises ValueError if the carrier is not resolved by the grid.
+
+        Resolution: the carrier changes by at most π per grid step, max|Lᵀ C p|·step ≤ π.
+        """
+        p = self.sample_points()
+        slope = np.einsum("ji,jk,...k->...i", self.lattice, self.curvature, p)
+        worst = float(np.max(np.abs(slope))) * self.step
         if worst > np.pi:
             raise ValueError(f"carrier phase not resolved on this grid ({worst:.3g} > π per step)")
-        grid = np.stack(np.meshgrid(x, x), axis=-1)
-        carrier = 0.5 * np.einsum("...i,ij,...j->...", grid, self.curvature, grid)
-        return np.asarray(self.values * np.exp(1j * carrier)[..., None])
+        return np.asarray(self.values * np.exp(1j * self.carrier())[..., None])

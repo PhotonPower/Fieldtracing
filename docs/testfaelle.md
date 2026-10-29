@@ -248,3 +248,38 @@ Faktor 2,3–2,5 je Halbierung von h). Ohne Abschälen der Randsplitter stagnier
   d = 18 mm, ψ = −k(ρ²/(2f) + bρ⁴/4), b = 9,45·10⁻⁴ mm⁻²): J wechselt auf einem Kreis
   ρ ≈ 1,35 mm das Vorzeichen. Markiert werden nur Knoten innerhalb 2h vom Kaustikkreis, jeder
   Knoten mit falschem Vorzeichen ist markiert, an allen übrigen stimmt μ (0 innen, 1 außen).
+
+## Operatorkette (Issue #19)
+
+Jeder Operator in `chain.py` gibt `(Feld, LogEntry)` zurück; das Protokoll enthält die Kennzahlen
+aus `selection.py` (w, F, Kantenverhältnis, SFT-Kennzahlen) und die Gültigkeitswarnungen.
+
+**Regression gegen F1** (gleiches Ergebnis wie der Baustein): geometrische Propagation =
+`propagate_2d`, PFT/inverse PFT = `pft_2d`/`inverse_pft_2d`, SFT = `sft_2d` je Komponente,
+FFT = `fourier.ft`, Blende auf dem Gitter = `circular_aperture_weights`, LPIA auf der Punktwolke
+= `trace_surface` + `interface_amplitude` mit `lpia.mesh_jacobian` (< 10⁻¹², Sphäre um den Fokus;
+dort zusätzlich |E₂| = |t|·|E₁|·r₁/r₂ und ∇ψ₂ wie die Kugelwelle in n₂ bis auf Rundung, neue
+Hesse-Matrix aus den Maschenableitungen auf 10⁻⁴).
+
+**Exakte Operatoren invertierbar** (bis auf Rundung): Winkelspektrum ±dz auf Punktwolke
+(Phase < 10⁻⁹ rad bei Phasen ~10⁵ rad), Frequenzgitter ohne und mit Träger (< 10⁻¹²);
+SFT hin und zurück (< 10⁻¹⁰); FFT hin und zurück (< 10⁻¹²).
+
+**Unabhängige Gegenproben der Buchführung:**
+
+- PFT → Winkelspektrum → inverse PFT = geometrische Propagation (`propagate_2d`): algebraische
+  Identität über die Legendre-Transformation, Amplitude < 10⁻¹⁰, auch hinter den Brennlinien
+  (Maslov-Phase) und für eine gekippte astigmatische Phase.
+- SFT → Winkelspektrum → inverse SFT gegen `propagation.angular_spectrum` auf einem Gitter halber
+  Schrittweite (Gauß × konvergente Kugelwelle, f = 50 mm, halber Weg zum Fokus; das
+  Ausgangsgitter ρ = (1 + dz·c/k)·u′ = u′/2 fällt auf das Referenzgitter): 9,6·10⁻⁸ relativ zum
+  Maximum. Paraxialer Anteil des Winkelspektrums wandert in den Träger, der Rest in die Werte.
+- FFT → Winkelspektrum → inverse FFT = `propagation.angular_spectrum` (< 10⁻¹²).
+- Geometrische Propagation mit Maschen-Jacobi gegen Hesse-Weg (gekippte astigmatische
+  quadratische Phase, 21²/41²/81² Strahlen): Amplitude 3,1·10⁻⁵ → 7,8·10⁻⁶ → 1,9·10⁻⁶,
+  neue Hesse-Matrix 4,7·10⁻⁵ → 1,2·10⁻⁵ → 3,0·10⁻⁶, beides O(h²).
+
+Beim letzten Vergleich fiel ein Fehler in `propagate_2d` auf (aus #17): die Strahlabbildung war
+transponiert, die neue Hesse-Matrix daher für nicht vertauschende H und Strahlrichtungen um
+≈ 4·10⁻⁴ falsch (J und μ waren richtig). Behoben, Regressionstest mit zentralen Differenzen in
+`test_semiclassical.py`.

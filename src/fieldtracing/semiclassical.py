@@ -100,7 +100,8 @@ def propagate_2d(
         np.eye(2)[None, :, :] / kz[:, None, None]
         + np.einsum("ni,nj->nij", gradient, gradient) / (kz**3)[:, None, None]
     )
-    mapping = np.eye(2)[None, :, :] + d * np.einsum("nij,njk->nik", hessian, dir_jac)
+    # ∂ρ₂/∂ρ₁ = I + d·∂(p/k_z)/∂p·H (rows: components of ρ₂)
+    mapping = np.eye(2)[None, :, :] + d * np.einsum("nij,njk->nik", dir_jac, hessian)
     jacobian = np.linalg.det(mapping)
     eigen = np.linalg.eigvals(mapping).real
     maslov = np.sum(eigen < 0.0, axis=1).astype(np.int64)
