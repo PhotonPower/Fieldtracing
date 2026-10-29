@@ -6,6 +6,9 @@
 > („Mx“ steht als Platzhalter). Grundlage: ADR-Entwurf `adr-entwurf-rtt-field.md`, API-Skizze
 > `api-skizze.md`, Sollwertdateien `reference/field/` (Fieldtracing-Commit beim Übernehmen
 > angeben).
+>
+> **Freigegeben** vom Maintainer von Fieldtracing am 2026-10-30 (Entscheidung E6 in
+> `docs/roadmap.md`); Übernahme nach Raytatouille dort nach dessen Prozess.
 
 ## Reihenfolge
 

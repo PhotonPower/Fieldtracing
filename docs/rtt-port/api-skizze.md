@@ -3,6 +3,9 @@
 > Entwurf aus Fieldtracing (#52) zum ADR-Entwurf `adr-entwurf-rtt-field.md`. Signaturen sind
 > Vorschläge; Einheiten wie in Raytatouille (mm, µm, rad, k in 1/mm). Nicht in Raytatouille
 > angelegt (Regel 8).
+>
+> **Freigegeben** vom Maintainer von Fieldtracing am 2026-10-30 (Entscheidung E6 in
+> `docs/roadmap.md`); Übernahme nach Raytatouille dort nach dessen Prozess.
 
 ## Gemeinsame Typen (`rtt/field/types.hpp`)
 
