@@ -1,0 +1,28 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+/build/
+/dist/
+.venv/
+venv/
+.vscode/
+.idea/
+
+# LaTeX build products
+docs/paper/*.aux
+docs/paper/*.log
+docs/paper/*.out
+docs/paper/*.toc
+docs/paper/*.pdf
+docs/paper/*.fls
+docs/paper/*.fdb_latexmk
+docs/paper/*.synctex.gz
+
+# experiment output
+experiments/out/
+
+# Claude Code worktrees
+.claude/worktrees/

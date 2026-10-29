@@ -1,0 +1,25 @@
+name: Paper
+
+on:
+  push:
+    branches: [main]
+    paths: ["docs/paper/**"]
+  pull_request:
+    paths: ["docs/paper/**"]
+  workflow_dispatch:
+
+jobs:
+  latex:
+    name: Build PDF
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: xu-cheng/latex-action@v3
+        with:
+          root_file: fieldtracing.tex
+          working_directory: docs/paper
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fieldtracing-paper
+          path: docs/paper/fieldtracing.pdf
