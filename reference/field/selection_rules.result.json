@@ -1,0 +1,92 @@
+{
+ "format": "raytatouille-result",
+ "schema_version": "0.1.13",
+ "type": "FieldReference",
+ "data": {
+  "case": "selection_rules",
+  "description": "Selection rules of table tab:selection at ε = 2 % (one case per row).",
+  "source": "tests/test_plan.py (decision table); paper table tab:selection",
+  "parameters": {
+   "tolerance": 0.02,
+   "columns": [
+    "fresnel_min",
+    "fresnel_max",
+    "edge_ratio",
+    "target_fresnel",
+    "fresnel_number"
+   ]
+  },
+  "inputs": {
+   "cases": [
+    "interface",
+    "strong_away_from_edges",
+    "near_edge",
+    "weak",
+    "mixed",
+    "caustic",
+    "focus_small_nf"
+   ],
+   "figures": {
+    "dtype": "float64",
+    "shape": [
+     7,
+     5
+    ],
+    "values": [
+     "Infinity",
+     "Infinity",
+     0.0,
+     "Infinity",
+     "Infinity",
+     500.0,
+     600.0,
+     0.0,
+     300.0,
+     95.0,
+     500.0,
+     600.0,
+     0.3,
+     300.0,
+     95.0,
+     0.0,
+     0.5,
+     0.0,
+     "Infinity",
+     "Infinity",
+     0.0,
+     600.0,
+     0.0,
+     "Infinity",
+     "Infinity",
+     500.0,
+     600.0,
+     0.0,
+     0.01,
+     95.0,
+     60.0,
+     70.0,
+     0.0,
+     0.01,
+     11.0
+    ]
+   }
+  },
+  "expected": {
+   "methods": [
+    "lpia",
+    "geometric",
+    "sft",
+    "fft",
+    "mixed",
+    "debye",
+    "rayleigh_sommerfeld"
+   ]
+  },
+  "tolerance": {
+   "rel": 0.0,
+   "abs": 0.0
+  },
+  "reference": {},
+  "reference_tolerance": {}
+ }
+}
