@@ -34,7 +34,7 @@ Leitlinien, die sich aus dem Ziel ergeben:
 | --- | --- | --- |
 | **F0 Fundament** ✅ | Repository, Doku, CI, Konventionen, ADR 0001–0003; 1D-Bausteine; Testfälle T1–T3, T5–T8 | CI grün; Fehler der SFT reproduziert die Tabelle im Paper; PFT und Jacobi-Gesetz konvergieren mit O(1/k) |
 | **F1 Bausteine 2D** ✅ | SFT für allgemeines C, inverse PFT/SFT, Minimax-Krümmung, 2D-Kanten (Randintegral, kritische Punkte 2. Art), Debye-Fokus per FFT, LPIA an gekrümmter Fläche mit Strahlnetz | T1–T8 vollständig in 2D; T4 (Debye gegen Rayleigh-Sommerfeld für N_F von 3 bis 10³) |
-| **F2 Hybride Darstellung und Verkettung** (#17–#21) | `GridlessField`/`GriddedField` mit Verhalten, Übergänge Punktwolke ↔ Gitter, Jacobi-Faktor aus Maschenflächen, Auswahlregeln als Planer, Operatorkette | Kette Linse → Blende → Ebene stimmt mit dem Winkelspektrum innerhalb der Toleranzen aus Tabelle 7.3 |
+| **F2 Hybride Darstellung und Verkettung** (#17–#21) ✅ | `GridlessField`/`GriddedField` mit Verhalten, Übergänge Punktwolke ↔ Gitter, Jacobi-Faktor aus Maschenflächen, Auswahlregeln als Planer, Operatorkette | Kette Linse → Blende → Ebene stimmt mit dem Winkelspektrum innerhalb der Toleranzen aus Tabelle 7.3 |
 | **F3 Integrationstest Kapitel 7.5** | Beispiel D = 25 mm, NA 0,5: Fokus und Zwischenebene; verkleinertes System gegen direkte Rayleigh-Sommerfeld-Rechnung; vektoriell mit Richards-Wolf | Abweichungen und Punktzahlen dokumentiert; Paper bei Abweichungen korrigiert |
 | **F4 Brücke zu Raytatouille (lesend)** (#22–#25) | Adapter: Strahldaten aus der Python-API von Raytatouille → `GridlessField` (Phase aus OPL, Amplitude aus weight und Maschen, Polarisation aus PRT) | Debye-Fokus aus Raytatouille-Strahlen = FFT-PSF von Raytatouille bei kleiner NA; Abweichungen bei hoher NA erklärt (√cos, Vektor) |
 | **F5 Integrationsvorschlag** | ADR-Entwurf `rtt-field`, API-Skizze, Sollwertdateien für den Port, Issue-Entwürfe im Format von Raytatouille | Freigabe durch den Maintainer |
@@ -69,6 +69,11 @@ Meilenstein „F2 Hybride Darstellung und Verkettung“ auf GitHub.
 | F2-5 | #21 | Strahlschleife in `lpia` vektorisieren | Tests unverändert, ≥ 50-fach schneller |
 
 Reihenfolge: #17, dann #18 und #19 parallel, dann #20. #21 ist unabhängig.
+
+Abgeschlossen am 2026-10-29. Abnahme: Kette Linse → Kreisblende → Ebene gegen direkte
+Rayleigh-Sommerfeld-Quadratur innerhalb des vom Planer vorhergesagten Budgets (Werte in
+`docs/testfaelle.md`), ausgenommen eine schmale Zone um die Achse der Kreisblende (Kaustik der
+Kantenwelle); die Abweichungen zum Paper stehen in #31.
 
 ## F4 im Detail
 
