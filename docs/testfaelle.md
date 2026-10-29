@@ -364,3 +364,27 @@ Ciddor-Luft (n = 1,000272 bei 0,5876 µm).
   |T₂T₁ E|² relativ < 10⁻¹², bei Brewster p-Transmission 1.
 - **Volumenabsorption** (`m3/absorbing_ar_plate`, κ = 10⁻⁶, 10 mm, AR-Schichten): s auf der Achse
   = exp(−4πκt/λ) relativ < 10⁻¹²; |M E|² = `polar.transmission` auch für einen gekippten Strahl.
+
+## Raytatouille-Strahlen → GridlessField (Issue #24, Marker `rtt`)
+
+`rtt_bridge.trace_field` an der Einzellinse `m1/singlet_const` (λ = 0,5876 µm, Ciddor-Luft),
+Feld auf z = 60 mm zwischen Linse und Fokus, `GridPupil(n)`:
+
+| Prüfung | 21² Pupille | 41² Pupille |
+| --- | --- | --- |
+| gegen zwei `chain.lpia_surface`-Schritte: Landepunkte | < 10⁻¹⁴ mm | < 10⁻¹⁴ mm |
+| Phase (Werte ~10⁶ rad) | 3,5·10⁻¹⁰ rad | 3,5·10⁻¹⁰ rad |
+| Amplitude, alle Strahlen / innere 80 % | 3,1·10⁻⁴ / 2,2·10⁻⁴ | 1,4·10⁻⁴ / 6,6·10⁻⁵ |
+| Hesse-Matrix (relativ) | 2,9·10⁻³ | 4,8·10⁻⁴ |
+
+Beide Wege schätzen J aus Maschen (eine Abbildung gegen zwei Schritte); innen O(h²), am
+ausgefransten Rand der Gitterpupille etwas langsamer.
+
+- **Phase gegen `opd_points`:** OPL jedes Strahls von z = 60 mm rückwärts bis zu Raytatouilles
+  Referenzsphäre verlängert, W = (OPL_Hauptstrahl − OPL)/λ: Abweichung < 10⁻⁸ Wellen bei bis zu
+  4 Wellen Aberration.
+- **Leistung:** Feld über die Lande-Dreiecke integriert (nur Geometrie, ohne J) gegen
+  Eingangsleistung im Wellenfront-Dreieck mal `polar.transmission`: relativ 1,4·10⁻⁴ (Achsfeld
+  und Feld 5°), Quadraturfehler O(h²).
+- **Ohne Raytatouille:** gekippte ebene Welle in einem Medium: J = 1/cos γ zwischen
+  Wellenfrontebene und z-Ebene, Amplitude = projizierter Jones-Vektor, Phase k₀n k·r.

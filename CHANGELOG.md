@@ -73,6 +73,11 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 - `rtt_bridge.field_operator`, `transverse_prt`, `absorption_factor`: Feldamplitude aus
   Raytatouilles leistungsnormierter PRT-Matrix und Gewicht, Herleitung in ADR 0004 (#23).
 
+- `rtt_bridge.field_from_rays` und `rtt_bridge.trace_field`: hybrides Feld auf einer Ebene aus
+  Raytatouille-Strahlen (Phase k₀·OPL, k⊥ aus der Richtung, Amplitude nach ADR 0004 mit
+  Maschen-Jacobi, Hesse-Matrix aus den Nachbarstrahlen; vignettierte Strahlen ausgeschlossen);
+  `field_operator` mit wählbaren Ebenennormalen (#24).
+
 ### Behoben
 
 - `semiclassical.propagate_2d`: Die Strahlabbildung ∂ρ₂/∂ρ₁ wurde transponiert gebildet
