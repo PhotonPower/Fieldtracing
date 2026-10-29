@@ -1,0 +1,760 @@
+\documentclass[11pt,a4paper]{scrartcl}
+
+% ============================================================================
+% PAKETE & EINSTELLUNGEN
+% ============================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[ngerman]{babel}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage{mathtools}
+\usepackage{bm}
+
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!60!black,
+    citecolor=blue!60!black,
+    urlcolor=blue!60!black
+}
+
+\newtheoremstyle{insightstyle}
+  {10pt}{10pt}{\normalfont}{0pt}{\bfseries\color{blue!60!black}}{:}{0.5em}{}
+\theoremstyle{insightstyle}
+\newtheorem{erkenntnis}{Erkenntnis}
+\newtheorem{bemerkung}{Bemerkung}
+
+% Kurzschreibweisen
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\ii}{\mathrm{i}}
+\newcommand{\ee}{\mathrm{e}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\F}{\mathcal{F}}
+\newcommand{\grad}{\nabla_{\!\perp}}
+\newcommand{\Hess}{\bm{H}}
+\newcommand{\rh}{\bm{\rho}}
+\newcommand{\kp}{\bm{k}_\perp}
+\newcommand{\NA}{\mathrm{NA}}
+\newcommand{\Sc}{\mathcal{S}}
+\DeclareMathOperator{\sig}{sig}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator{\erfc}{erfc}
+
+% ============================================================================
+% TITEL
+% ============================================================================
+\title{\textbf{Theoretische Grundlagen des Field Tracing}}
+\subtitle{Eine asymptotische Analyse aus Wellenoptik, Phasenraum-Geometrie\\ und Pfadintegral-Bild}
+\author{[Autorinnen und Autoren]}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\noindent
+Dieser Bericht untersucht die mathematischen Grundlagen der \emph{Field-Tracing}-Methodik der schnellen physikalischen Optik. Die Bausteine -- lokale Ebene-Grenzflächen-Näherung (LPIA), hybride Feldzerlegung mit gitterlos dargestellter Wellenfront, punktweise Fourier-Transformation (PFT), semi-analytische Fourier-Transformation (SFT) und klassische FFT -- werden als asymptotische Auswertungen gewöhnlicher Ausbreitungsintegrale (Winkelspektrum, Rayleigh-Sommerfeld-Kern) hergeleitet. Das Feynmansche Pfadintegral dient dabei als ordnendes Bild: Klassische Strahlen entsprechen Sattelpunkten, die Van-Vleck-Amplitude den Gaußschen Fluktuationen, Kaustiken entarteten Sattelpunkten und Blendenkanten kritischen Punkten 2.~Art. Gezeigt wird insbesondere, dass das Amplitudengesetz des Strahlennetzes aus dem semiklassischen Van-Vleck-Kern folgt, dass die Kette PFT $\to$ Winkelspektrum $\to$ FFT bei exakt sphärischer Wellenfront das skalare Debye-Integral ohne paraxiale Näherung liefert und dass die SFT einer exakten Umformung mit zwei FFTs entspricht, deren Abtastbedingungen sich explizit angeben lassen. Alle Herleitungen sind Näherungen führender Ordnung in $1/k_0$. Aus ihren Gültigkeitsbedingungen werden lokale Kennzahlen, Auswahlregeln, ein Fehlerbudget und Aufwandsabschätzungen abgeleitet und an einem Beispiel durchgerechnet; für die numerische Überprüfung werden Testfälle vorgeschlagen.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% ============================================================================
+\section{Einleitung und Skalenproblem}
+% ============================================================================
+
+\subsection{Grundgleichungen und Konventionen}
+Wir betrachten monochromatische Felder der Kreisfrequenz $\omega$ mit der Zeitkonvention $\ee^{-\ii\omega t}$ und der Vakuumwellenzahl $k_0=2\pi/\lambda_0$. In einem nichtmagnetischen, isotropen Medium mit ortsabhängiger Brechzahl $n(\bm r)$ folgt aus den Maxwell-Gleichungen mit $\nabla\cdot(n^2\bm E)=0$ die vektorielle Wellengleichung
+\begin{equation}
+    \nabla^2\bm E + n^2(\bm r)\,k_0^2\,\bm E + \nabla\!\big(\bm E\cdot\nabla\ln n^2\big) = \bm 0 .
+    \label{eq:vector_wave}
+\end{equation}
+Der letzte Term koppelt die kartesischen Komponenten. Nur in \emph{homogenen} Bereichen ($n=\text{const.}$) entfällt er; dann genügt jede kartesische Komponente der skalaren Helmholtz-Gleichung $(\nabla^2+n^2k_0^2)E_j=0$, ergänzt durch die Transversalitätsbedingung $\nabla\cdot\bm E=0$. Wir modellieren optische Systeme im Folgenden als \emph{stückweise homogen}: homogene Bereiche, getrennt durch glatte Grenzflächen. Inhomogene Medien treten nur in Abschnitt~\ref{sec:pathintegral} im Pfadintegral-Bild auf.
+
+Auf einer Ebene $z=\text{const.}$ mit transversalen Koordinaten $\rh=(x,y)^T$ verwenden wir die Fourier-Konvention
+\begin{equation}
+    \tilde{\bm E}(\kp) = \F\{\bm E\}(\kp) = \frac{1}{(2\pi)^2}\iint_{\R^2}\bm E(\rh)\,\ee^{-\ii\kp\cdot\rh}\,\dd^2\rho,
+    \qquad
+    \bm E(\rh) = \iint_{\R^2}\tilde{\bm E}(\kp)\,\ee^{\ii\kp\cdot\rh}\,\dd^2k_\perp .
+    \label{eq:ft_convention}
+\end{equation}
+Mit dieser Konvention gilt der Faltungssatz in der Form $\F\{f*g\}=(2\pi)^2\,\F\{f\}\,\F\{g\}$ und $\F\{fg\}=\F\{f\}*\F\{g\}$. In einem homogenen Bereich der Brechzahl $n$ propagiert ein vorwärtslaufendes Feld exakt gemäß
+\begin{equation}
+    \tilde{\bm E}(\kp,z+\Delta z) = \ee^{\ii k_z(\kp)\,\Delta z}\,\tilde{\bm E}(\kp,z),
+    \qquad k_z(\kp)=\sqrt{n^2k_0^2-|\kp|^2},\quad \operatorname{Im}k_z\ge 0,
+    \label{eq:spw}
+\end{equation}
+und die Transversalität verlangt $\tilde E_z = -\kp\cdot\tilde{\bm E}_\perp/k_z$.
+
+\subsection{Das Abtastproblem an Linsen hoher Apertur}\label{sec:sampling}
+Hinter einer Sammellinse trägt das Feld eine stark gekrümmte Phase. Für eine exakt sphärische, zum Fokus konvergierende Welle in Luft ist der Betrag des transversalen Phasengradienten $|\grad\varphi| = k_0\sin\theta$, wobei $\theta$ der Winkel des lokalen Strahls zur Achse ist. Am Aperturrand gilt daher
+\begin{equation}
+    |\grad\varphi|_{\max} = k_0\sin\theta_{\max} = k_0\,\NA .
+\end{equation}
+Das komplexe Feld $\ee^{\ii\varphi}$ belegt also das Ortsfrequenzband $|\kp|\le k_0\NA$. Nach dem Abtasttheorem erfordert eine äquidistante Darstellung einen Gitterabstand $\Delta x\le \pi/(k_0\NA) = \lambda_0/(2\NA)$. Für eine Apertur mit Durchmesser $D=25\,\text{mm}$, $\NA=0{,}5$ und $\lambda_0=500\,\text{nm}$ ergibt das in zwei Dimensionen
+\begin{equation}
+    N = \left(\frac{D}{\Delta x}\right)^2 = \left(\frac{25\times10^{-3}\,\text{m}}{0{,}5\times10^{-6}\,\text{m}}\right)^2 = 2{,}5\times10^{9}\ \text{Abtastpunkte}.
+\end{equation}
+Speicherung und FFT solcher Datenmengen über viele Flächen hinweg sind unpraktikabel.
+
+\subsection{Hybride Feldzerlegung}\label{sec:hybrid}
+Die Field-Tracing-Methodik~\cite{wyrowski2011} umgeht dieses Problem, indem sie eine glatte, aber stark variierende Wellenfrontphase $\psi(\rh)=k_0S(\rh)$ explizit abspaltet:
+\begin{equation}
+    \boxed{\;\bm E(\rh) = \bm U(\rh)\,\ee^{\ii\psi(\rh)} = \bm U(\rh)\,\ee^{\ii k_0S(\rh)}\;}
+    \label{eq:hybrid_split}
+\end{equation}
+Dabei ist $\bm U=(U_x,U_y,U_z)^T\in\mathbb C^3$ der vollständige Restfeldvektor. Für ein lokal ebenes Wellenfeld ist $U_z$ durch die Transversalität festgelegt, $U_z\approx-\grad\psi\cdot\bm U_\perp/k_z(\grad\psi)$; in Rechnungen genügt es daher, $\bm U_\perp$ zu speichern. Die asymptotischen Verfahren der Abschnitte~\ref{sec:rays}--\ref{sec:caustics} setzen voraus:
+\begin{itemize}
+    \item[(A1)] $\psi$ ist glatt, und die Phase $\ee^{\ii\psi}$ oszilliert schnell gegenüber den Längenskalen, auf denen sich $\psi$-Ableitungen höherer Ordnung ändern.
+    \item[(A2)] $\bm U$ variiert langsam über eine Fresnel-Zone der Wellenfront, $w\sim|\det\Hess_\psi|^{-1/4}$ (siehe Abschnitt~\ref{sec:pft}).
+    \item[(A3)] Innerhalb des betrachteten Gebiets liegen keine scharfen Ränder.
+\end{itemize}
+Wo (A2) oder (A3) verletzt sind, etwa an Blendenkanten, greifen die Verfahren aus Abschnitt~\ref{sec:edges}. Weil $\psi$ glatt ist, kann es auf einer gitterlosen Punktwolke deutlich dünner abgetastet werden als $\ee^{\ii\psi}$; $\bm U$ wird gemäß seiner eigenen, kleinen Bandbreite abgetastet.
+
+% ============================================================================
+\section{Ausbreitungsoperatoren und Pfadintegral-Bild}\label{sec:pathintegral}
+% ============================================================================
+
+\subsection{Einweg-Ausbreitung und Zerlegung in Teillöser}
+Gleichung~\eqref{eq:spw} definiert einen Ausbreitungsoperator $\mathcal P(z_2,z_1)$ für vorwärtslaufende Felder. Er hat die Halbgruppeneigenschaft
+\begin{equation}
+    \mathcal P(z_3,z_2)\,\mathcal P(z_2,z_1) = \mathcal P(z_3,z_1).
+\end{equation}
+Im Ortsraum entspricht $\mathcal P$ für jede kartesische Komponente dem Rayleigh-Sommerfeld-Integral erster Art,
+\begin{equation}
+    \bm E(\rh_2,z+d) = \iint K_d(\rh_2-\rh_1)\,\bm E(\rh_1,z)\,\dd^2\rho_1,
+    \qquad
+    K_d(\bm\Delta) = \frac{d}{2\pi r^2}\left(\frac1r-\ii k\right)\ee^{\ii kr},
+    \label{eq:rs_kernel}
+\end{equation}
+mit $r=\sqrt{d^2+|\bm\Delta|^2}$ und $k=nk_0$. Ein sequenziell durchlaufenes optisches System mit $M$ Grenzflächen-Operatoren $\mathcal T_j$ wird damit zu
+\begin{equation}
+    \bm E_\text{aus} = \mathcal P_M\,\mathcal T_M\cdots\mathcal P_1\,\mathcal T_1\,\mathcal P_0\,\bm E_\text{ein}.
+    \label{eq:system_chain}
+\end{equation}
+Diese Faktorisierung vernachlässigt Rückreflexe zwischen den Flächen; diese müssten über eine iterative (nicht-sequenzielle) Verkopplung ergänzt werden. Jeder Faktor in \eqref{eq:system_chain} darf mit einer eigenen, lokal passenden Näherung ausgewertet werden. Das ist die mathematische Grundlage dafür, verschiedene Teillöser zu verbinden. An jeder Zwischenebene kann dabei wahlweise in der Orts- oder in der Winkelbasis gearbeitet werden.
+
+\subsection{Phasenraum-Pfadintegral}
+Zerlegt man das Intervall $[z_a,z_b]$ in $N$ Schritte der Länge $\varepsilon$ und fügt in jedem Schritt Orts- und Winkelbasis ein, erhält man formal das Phasenraum-Pfadintegral
+\begin{equation}
+    K(\rh_b,z_b;\rh_a,z_a) = \lim_{N\to\infty}\int\prod_{j=1}^{N-1}\dd^2\rho_j\prod_{j=0}^{N-1}\frac{\dd^2k_j}{(2\pi)^2}\,
+    \exp\!\Big\{\ii\sum_{j=0}^{N-1}\big[\bm k_j\cdot(\rh_{j+1}-\rh_j)+\varepsilon\,h(\rh_j,\bm k_j,z_j)\big]\Big\},
+    \label{eq:phase_space_pi}
+\end{equation}
+mit $\rh_0=\rh_a$, $\rh_N=\rh_b$ und $h(\rh,\bm k,z)=\sqrt{n^2(\rh,z)k_0^2-|\bm k|^2}$. Für $N=1$ und konstantes $n$ ist \eqref{eq:phase_space_pi} exakt der Kern von \eqref{eq:spw}. Für ortsabhängiges $n$ ist der Ausdruck formal, weil die Operatorordnung von $\sqrt{n^2(\rh)k_0^2+\nabla_\perp^2}$ nicht eindeutig ist.
+
+Die Stationaritätsbedingungen des Exponenten sind die Hamiltonschen Strahlgleichungen mit $H=-h$:
+\begin{equation}
+    \frac{\dd\rh}{\dd z} = \frac{\bm k}{\sqrt{n^2k_0^2-|\bm k|^2}},\qquad
+    \frac{\dd\bm k}{\dd z} = \frac{n\,k_0^2\,\grad n}{\sqrt{n^2k_0^2-|\bm k|^2}}.
+\end{equation}
+Die Legendre-Transformation $\bm k = nk_0\,\rh'/\sqrt{1+|\rh'|^2}$ liefert die Lagrange-Funktion
+\begin{equation}
+    \bm k\cdot\rh' + h = n\,k_0\sqrt{1+|\rh'|^2},
+    \qquad\Longrightarrow\qquad
+    \int(\bm k\cdot\rh'+h)\,\dd z = k_0\int_\Gamma n\,\dd s \eqqcolon k_0\,\ell[\Gamma].
+    \label{eq:fermat_action}
+\end{equation}
+Die klassische Wirkung ist also die optische Weglänge $\ell[\Gamma]$. Die oft zitierte Konfigurationsraum-Form $\int\mathcal D[\Gamma]\,\ee^{\ii k_0\ell[\Gamma]}$ ist als heuristische Kurzschrift von \eqref{eq:phase_space_pi} zu lesen. Als eigenständige Definition ist sie nicht wohldefiniert, weil $\ell[\Gamma]$ reparametrisierungsinvariant ist und das Pfadmaß unbestimmt bleibt.
+
+Exakt und wohldefiniert ist dagegen der paraxiale Grenzfall~\cite{gloge1969}. Mit $n=\bar n+\delta n$, $\bar k=\bar nk_0$ und $\bm E=u\,\ee^{\ii\bar kz}$ lautet die paraxiale Wellengleichung
+\begin{equation}
+    2\ii\bar k\,\partial_z u + \nabla_\perp^2u + k_0^2(n^2-\bar n^2)\,u = 0 .
+\end{equation}
+Sie ist eine Schrödinger-Gleichung mit $z$ als Zeit, $\hbar\to1$, Masse $\bar k$ und Potential $-k_0^2(n^2-\bar n^2)/(2\bar k)$. Ihr Propagator ist das Feynmansche Pfadintegral~\cite{feynman1965} mit der Lagrange-Funktion $\tfrac{\bar k}{2}|\rh'|^2 + k_0^2(n^2-\bar n^2)/(2\bar k)$. Im freien Raum ergibt sich der Fresnel-Kern $\frac{\bar k}{2\pi\ii\Delta z}\ee^{\ii\bar k|\Delta\rh|^2/(2\Delta z)}$. Für kleine $\delta n$ und kleine Neigungen stimmt die Wirkung bis zur zweiten Ordnung mit $k_0\ell[\Gamma]$ überein.
+
+\begin{bemerkung}[Status des Pfadintegrals in diesem Bericht]
+Alle folgenden Ergebnisse werden aus gewöhnlichen, endlichdimensionalen Integralen hergeleitet: dem Winkelspektrum \eqref{eq:spw}, dem Kern \eqref{eq:rs_kernel} und Fourier-Integralen. Ausgewertet wird jeweils mit stationärer Phase. Das Pfadintegral liefert das ordnende Bild: Sattelpunkte entsprechen Strahlen, Gaußsche Fluktuationen der Van-Vleck-Amplitude, entartete Sattelpunkte Kaustiken und Randpunkte Kantenwellen.
+\end{bemerkung}
+
+% ============================================================================
+\section{Geometrische Feldnäherung: Strahlen, LPIA und Van-Vleck-Kern}\label{sec:rays}
+% ============================================================================
+
+\subsection{Stationäre Phase erster Ordnung: Fermat-Prinzip}
+Für $k_0\to\infty$ tragen in \eqref{eq:phase_space_pi} nur Umgebungen stationärer Pfade bei, also $\delta\ell[\Gamma]=0$ (Fermat-Prinzip). Diese Pfade sind die geometrischen Strahlen, senkrecht zu den Flächen konstanter Eikonalfunktion mit $|\nabla S|=n$. Auf einer Ebene $z=\text{const.}$ hat ein Strahl der Wellenfront $\psi$ den transversalen Wellenvektor
+\begin{equation}
+    \kp(\rh) = \grad\psi(\rh) = k_0\grad S(\rh).
+    \label{eq:local_k}
+\end{equation}
+
+\subsection{Lokale Ebene-Grenzflächen-Näherung (LPIA)}
+Die LPIA~\cite{vonpfeil2000} behandelt eine glatte Grenzfläche $z=h(\rh)$ zwischen den Medien $n_1$ und $n_2$ punktweise als Tangentialebene mit der Normalen
+\begin{equation}
+    \bm n(\rh) = \frac{(-\partial_xh,\,-\partial_yh,\,1)^T}{\sqrt{1+(\partial_xh)^2+(\partial_yh)^2}}.
+\end{equation}
+Das einfallende Feld wird am Flächenpunkt als lokale ebene Welle mit dem Wellenvektor
+\begin{equation}
+    \bm k_\text{ein} = \Big(\partial_x\psi,\;\partial_y\psi,\;\sqrt{n_1^2k_0^2-|\grad\psi|^2}\Big)^T
+\end{equation}
+aufgefasst. Dabei ist $\psi$ die Phase des auf die Fläche propagierten Feldes. Gültigkeitsvoraussetzungen sind: Die Krümmungsradien von Fläche und Wellenfront sind groß gegenüber der Wellenlänge (nach~\cite{vonpfeil2000} als grobe Abschätzung einige Wellenlängen), und $\bm U$ ändert sich über einige Wellenlängen kaum. An der Tangentialebene werden die exakten Randbedingungen einer ebenen Grenzfläche gelöst.
+
+\paragraph{Phasenstetigkeit.} Die Tangentialkomponente des Wellenvektors bleibt erhalten, $\bm k_\text{aus}\times\bm n=\bm k_\text{ein}\times\bm n$. Daraus folgt
+\begin{equation}
+    \bm k_\text{aus} = \bm k_\text{ein} + \left(\sqrt{n_2^2k_0^2-|\bm k_\text{ein}|^2+(\bm k_\text{ein}\cdot\bm n)^2}-\bm k_\text{ein}\cdot\bm n\right)\bm n .
+\end{equation}
+
+\paragraph{Vektorieller Fresnel-Operator.} Mit $\hat{\bm k}=\bm k/|\bm k|$ definieren wir
+\begin{equation}
+    \hat{\bm s} = \frac{\hat{\bm k}_\text{ein}\times\bm n}{|\hat{\bm k}_\text{ein}\times\bm n|},\qquad
+    \hat{\bm p}_\text{ein} = \hat{\bm k}_\text{ein}\times\hat{\bm s},\qquad
+    \hat{\bm p}_\text{aus} = \hat{\bm k}_\text{aus}\times\hat{\bm s}.
+\end{equation}
+Der Durchgang wirkt auf den vollen Vektor $\bm U\in\mathbb C^3$ als $3\times3$-Matrix
+\begin{equation}
+    \bm{\mathcal T} = t_s\,\hat{\bm s}\hat{\bm s}^T + t_p\,\hat{\bm p}_\text{aus}\hat{\bm p}_\text{ein}^T,
+    \qquad
+    t_s=\frac{2n_1\cos\theta_\text{e}}{n_1\cos\theta_\text{e}+n_2\cos\theta_\text{a}},\quad
+    t_p=\frac{2n_1\cos\theta_\text{e}}{n_2\cos\theta_\text{e}+n_1\cos\theta_\text{a}},
+    \label{eq:fresnel_operator}
+\end{equation}
+mit $\cos\theta_\text{e}=\hat{\bm k}_\text{ein}\cdot\bm n$ und $\cos\theta_\text{a}=\hat{\bm k}_\text{aus}\cdot\bm n$~\cite{bornwolf1999}. Bei senkrechtem Einfall ist $\hat{\bm s}$ beliebig senkrecht zu $\bm n$ wählbar, wegen $t_s=t_p$ ist das Ergebnis davon unabhängig. Für Beschichtungen werden $t_s,t_p$ durch die Koeffizienten der Schichtmatrix ersetzt. Weil die einfallende Welle transversal ist ($\bm k_\text{ein}\cdot\bm U=0$), liefert \eqref{eq:fresnel_operator} automatisch ein transversales Ausgangsfeld. Die LPIA vernachlässigt Mehrfachreflexe innerhalb eines Elements, evaneszente Kopplung und laterale Strahlversätze an beschichteten Flächen.
+
+\subsection{Semiklassischer Kern (Van Vleck)}
+Für den Kern zwischen zwei Ebenen $\Sigma_1$, $\Sigma_2$ ergibt die Gaußsche Auswertung der Fluktuationen um einen klassischen Strahl den Van-Vleck-Kern~\cite{vanvleck1928,morette1951}. In zwei Transversaldimensionen und mit $\hbar\to1/k_0$ lautet er
+\begin{equation}
+    \boxed{\;K_\text{sk}(\rh_2,\rh_1) = \frac{k_0}{2\pi\ii}\sqrt{|\det\bm B|}\;\ee^{\ii k_0\Sc(\rh_2,\rh_1)-\ii\frac\pi2\nu_K},
+    \qquad \bm B = -\frac{\partial^2\Sc}{\partial\rh_2\,\partial\rh_1}\;}
+    \label{eq:van_vleck}
+\end{equation}
+Hier ist $\Sc(\rh_2,\rh_1)$ die optische Weglänge des Strahls von $\rh_1$ nach $\rh_2$, also Hamiltons Punktcharakteristik, und $\nu_K$ ist die Anzahl der Kaustiken des Kernstrahls. Gibt es mehrere Strahlen, wird über sie summiert.
+
+\paragraph{Kontrolle am homogenen Medium.} Mit $\Sc=n\,r$, $r=\sqrt{d^2+|\rh_2-\rh_1|^2}$ ist $\bm B = \partial^2\Sc/\partial\rh_2^2 = n(\bm I/r-\bm\Delta\bm\Delta^T/r^3)$ mit $\det\bm B = n^2d^2/r^4$ und $\nu_K=0$. Daraus folgt
+\begin{equation}
+    K_\text{sk} = \frac{nk_0}{2\pi\ii}\frac{d}{r^2}\,\ee^{\ii nk_0r}.
+\end{equation}
+Das ist exakt der führende Term des Rayleigh-Sommerfeld-Kerns \eqref{eq:rs_kernel} für $kr\gg1$. Paraxial ($r\approx d+|\bm\Delta|^2/(2d)$) entsteht der Fresnel-Kern.
+
+\subsection{Propagation eines Feldes: Jacobi-Gesetz und Maslov-Index}\label{sec:jacobi}
+Wir wenden \eqref{eq:van_vleck} auf das Feld $\bm U_1\ee^{\ii\psi_1}$ auf $\Sigma_1$ an:
+\begin{equation}
+    \bm E_2(\rh_2) = \iint K_\text{sk}(\rh_2,\rh_1)\,\bm U_1(\rh_1)\,\ee^{\ii\psi_1(\rh_1)}\,\dd^2\rho_1 .
+\end{equation}
+Die Gesamtphase $\Theta(\rh_1)=\psi_1(\rh_1)+k_0\Sc(\rh_2,\rh_1)$ ist stationär für
+\begin{equation}
+    \grad\psi_1(\rh_1) = -k_0\frac{\partial\Sc}{\partial\rh_1}(\rh_2,\rh_1).
+    \label{eq:ray_condition}
+\end{equation}
+Das heißt: Der Strahl startet senkrecht zur Wellenfront. Gleichung~\eqref{eq:ray_condition} definiert implizit die Strahlabbildung $\rh_1\mapsto\rh_2(\rh_1)$. Implizites Differenzieren liefert
+\begin{equation}
+    \frac{\partial\rh_2}{\partial\rh_1} = (\bm B^T)^{-1}\,\frac{\Hess_\Theta}{k_0},
+    \qquad
+    \Hess_\Theta = \Hess_{\psi_1} + k_0\frac{\partial^2\Sc}{\partial\rh_1^2},
+    \qquad
+    J \coloneqq \det\frac{\partial\rh_2}{\partial\rh_1} = \frac{\det\Hess_\Theta}{k_0^2\det\bm B}.
+    \label{eq:jacobian_relation}
+\end{equation}
+Die zweidimensionale stationäre Phase ergibt den Faktor $2\pi\,|\det\Hess_\Theta|^{-1/2}\ee^{\ii\frac\pi4\sig\Hess_\Theta}$. Zusammen mit dem Vorfaktor von \eqref{eq:van_vleck} und \eqref{eq:jacobian_relation} kürzen sich $k_0$, $\det\bm B$ und $2\pi$:
+\begin{equation}
+    \boxed{\;\bm E_2(\rh_2) \simeq \sum_{\text{Strahlen}}\frac{\bm U_1(\rh_1)}{\sqrt{|J(\rh_1)|}}\;\ee^{\ii[\psi_1(\rh_1)+k_0\Sc(\rh_2,\rh_1)]-\ii\frac\pi2\mu},
+    \qquad J=\frac{\dd A_2}{\dd A_1}\;}
+    \label{eq:jacobian_amplitude}
+\end{equation}
+In homogenem Medium ist $\bm B$ positiv definit. Dann gilt $\mu=$ Anzahl der negativen Eigenwerte von $\partial\rh_2/\partial\rh_1$. Jede auf dem Weg durchlaufene Kaustik lässt einen Eigenwert sein Vorzeichen wechseln: eine Brennlinie zählt einfach, ein Punktfokus doppelt. Der Phasensprung $-\pi$ beim Durchgang durch einen Punktfokus ist die Gouy-Phase~\cite{baladron2018}. Die neue Wellenfront $\psi_2(\rh_2)=\psi_1+k_0\Sc$ erfüllt $\grad\psi_2=k_0\partial\Sc/\partial\rh_2$, der lokale Wellenvektor wird also korrekt transportiert. Paraxial gilt $\partial\rh_2/\partial\rh_1 = \bm I + d\,\Hess_{\psi_1}/(nk_0)$.
+
+\subsection{Durchgang durch eine Grenzfläche}
+Läuft ein Strahl von $\rh_1\in\Sigma_1$ (Medium $n_1$, Neigung $\gamma_1$ gegen die $z$-Achse) über einen Flächenpunkt mit LPIA-Operator $\bm{\mathcal T}$ nach $\rh_2\in\Sigma_2$ (Medium $n_2$, Neigung $\gamma_2$), so liefert die Erhaltung des Energieflusses $n|\bm E|^2\cos\gamma\,\dd A$ im Strahlschlauch
+\begin{equation}
+    \boxed{\;\bm U_2(\rh_2) = \sqrt{\frac{\cos\theta_\text{a}\,\cos\gamma_1\,\dd A_1}{\cos\theta_\text{e}\,\cos\gamma_2\,\dd A_2}}\;\ee^{-\ii\frac\pi2\mu}\;\bm{\mathcal T}\,\bm U_1(\rh_1),
+    \qquad \psi_2(\rh_2)=\psi_1(\rh_1)+k_0\,\ell(\text{Strahl})\;}
+    \label{eq:interface_amplitude}
+\end{equation}
+Die Brechzahlen kürzen sich heraus, weil die Fresnel-Koeffizienten bereits Feldamplituden verknüpfen. Für einen ebenen Übergang mit $\Sigma_1=\Sigma_2=$ Grenzfläche ist $\gamma_{1,2}=\theta_\text{e,a}$ und $\dd A_1=\dd A_2$; dann reduziert sich \eqref{eq:interface_amplitude} korrekt auf $\bm U_2=\bm{\mathcal T}\bm U_1$. Innerhalb eines homogenen Mediums ist $\cos\gamma$ entlang des Strahls konstant, und \eqref{eq:interface_amplitude} geht in \eqref{eq:jacobian_amplitude} über.
+
+\begin{erkenntnis}[Bedeutung der Nachbarschafts-Maschen]
+Die Nachbarschaftsbeziehungen des gitterlosen Strahlennetzes dienen nicht nur der Interpolation. Das Flächenverhältnis $\dd A_2/\dd A_1$ einer Netzmasche ist eine Diskretisierung von $J$. Nach \eqref{eq:jacobian_relation} enthält es in führender Ordnung genau das Gaußsche Integral über die Fluktuationen um den Strahl, also den Van-Vleck-Faktor kombiniert mit der Wellenfrontkrümmung. Differentielle Strahlverfolgung (Strahlschläuche) nutzt dieselbe Information.
+\end{erkenntnis}
+
+% ============================================================================
+\section{Punktweise Fourier-Transformation (PFT)}\label{sec:pft}
+% ============================================================================
+
+Für die Freiraumpropagation \eqref{eq:spw} wird das Fourier-Integral des hybrid dargestellten Feldes benötigt:
+\begin{equation}
+    \tilde{\bm E}(\kp) = \frac{1}{(2\pi)^2}\iint\bm U(\rh)\,\exp\!\Big(\ii\underbrace{\big[\psi(\rh)-\kp\cdot\rh\big]}_{\eqqcolon\Phi(\rh;\kp)}\Big)\,\dd^2\rho .
+    \label{eq:ft_integral}
+\end{equation}
+
+\subsection{Stationäre Phase}
+Ist $\psi$ stark gekrümmt, tragen nur Punkte mit stationärer Phase bei:
+\begin{equation}
+    \grad\Phi\big|_{\rh_s} = \grad\psi(\rh_s)-\kp = \bm 0
+    \quad\Longleftrightarrow\quad
+    \boxed{\kp = \grad\psi(\rh_s)}
+    \label{eq:pft_mapping}
+\end{equation}
+Das ist die Strahlabbildung vom Ort auf den Winkel. Sie ist eindeutig umkehrbar, solange $\grad\psi$ injektiv ist; andernfalls wird über alle stationären Punkte summiert. Mit der Entwicklung
+\begin{equation}
+    \Phi(\rh;\kp) \approx \underbrace{\psi(\rh_s)-\kp\cdot\rh_s}_{\eqqcolon\tilde\psi(\kp)} + \tfrac12(\rh-\rh_s)^T\Hess_\psi(\rh_s)(\rh-\rh_s)
+    \label{eq:ft_taylor}
+\end{equation}
+und $\iint\ee^{\frac\ii2\bm x^T\Hess\bm x}\dd^2x = 2\pi|\det\Hess|^{-1/2}\ee^{\ii\frac\pi4\sig\Hess}$ folgt
+\begin{equation}
+    \boxed{\;\tilde{\bm E}_\text{PFT}(\kp) = \frac{1}{2\pi}\,\frac{\bm U(\rh_s)}{\sqrt{|\det\Hess_\psi(\rh_s)|}}\;\exp\!\Big(\ii\tilde\psi(\kp)+\ii\frac\pi4\sig\Hess_\psi(\rh_s)\Big)\;}
+    \label{eq:pft_final}
+\end{equation}
+mit $\sig\Hess_\psi\in\{-2,0,+2\}$, der Anzahl positiver minus negativer Eigenwerte. Für rein quadratisches $\psi$ und konstantes $\bm U$ ist \eqref{eq:pft_final} exakt. Allgemein ist der relative Fehler von der Ordnung $1/(k_0\cdot\text{Skala})$, bestimmt durch die Änderung von $\bm U$ und der dritten Ableitungen von $\psi$ über die Fresnel-Zonenbreite $w\sim|\det\Hess_\psi|^{-1/4}$. Eng verwandte Formulierungen finden sich in der Literatur als „geometrische“ bzw. „homöomorphe“ Fourier-Transformation~\cite{wyrowski2017gft,wang2020}.
+
+\begin{erkenntnis}[Die drei Operationen der PFT]
+Die PFT kommt ohne numerische Integration aus und arbeitet punktweise in $\mathcal O(N)$:
+\begin{enumerate}
+    \item Koordinatenabbildung (Gradient): $\kp=\grad\psi(\rh_s)$.
+    \item Phasenupdate (Legendre-Transformation): $\tilde\psi(\kp)=\psi(\rh_s)-\kp\cdot\rh_s$.
+    \item Amplitudenskalierung: Faktor $|\det\Hess_\psi|^{-1/2}$ und Phase $\frac\pi4\sig\Hess_\psi$.
+\end{enumerate}
+Sie versagt, wenn $\det\Hess_\psi\to0$, etwa bei kollimierten Bereichen. Dort wird im Ortsraum gearbeitet (Abschnitt~\ref{sec:charts}).
+\end{erkenntnis}
+
+% ============================================================================
+\section{Kaustiken, Fokus und Maslovs Phasenraum-Methode}\label{sec:caustics}
+% ============================================================================
+
+\subsection{Lagrange-Mannigfaltigkeit im Phasenraum}
+Im Fokus schneiden sich benachbarte Strahlen ($\dd A_2\to0$, $J\to0$), und \eqref{eq:jacobian_amplitude} divergiert. Die Lösung stammt aus der symplektischen Geometrie~\cite{maslov1965,maslov1981,arnold1967}. Ein Wellenfeld mit glatter Phase definiert im vierdimensionalen Phasenraum $T^*\R^2\cong\R^4\ni(\rh,\kp)$ die zweidimensionale Fläche
+\begin{equation}
+    \Lambda = \big\{(\rh,\kp)\;\big|\;\kp=\grad\psi(\rh)\big\}.
+\end{equation}
+Mit der symplektischen Form $\sigma=\dd x\wedge\dd k_x+\dd y\wedge\dd k_y$ gilt $\sigma|_\Lambda=0$, weil $\sigma|_\Lambda=-\dd(\dd\psi)=0$. $\Lambda$ ist also Lagrangesch. Strahlausbreitung (Hamiltonscher Fluss) und Brechung (kanonische Abbildung) sind symplektische Diffeomorphismen. Deshalb bleibt $\Lambda$ bei Propagation eine glatte, eingebettete Lagrange-Fläche: Glattheit und Einbettung übertragen sich, weil der Fluss ein Diffeomorphismus ist, und die Lagrange-Eigenschaft, weil er $\sigma$ erhält. Kaustiken sind keine Singularitäten von $\Lambda$, sondern Singularitäten der Projektion $\pi_\rho:\Lambda\to\R^2_\rho$, also Punkte mit $\det(\dd\pi_\rho)=0$.
+
+\subsection{Projektionen und gemischte Karten}\label{sec:charts}
+Lokal kann $\Lambda$ über $\R^2_\rho$ (Ortsdarstellung) oder über $\R^2_k$ (Winkeldarstellung) parametrisiert werden, wenn die jeweilige Projektion regulär ist. Keine der beiden ist allgemein regulär. Bei kollimierten Bereichen ist $\pi_k$ singulär, an Kaustiken $\pi_\rho$. Es gilt aber der Satz~\cite{arnold1967,maslov1981}: In jedem Punkt von $\Lambda$ existiert eine Aufteilung der Indizes $\{x,y\}=I\cup\bar I$, sodass $\Lambda$ lokal Graph über den gemischten Koordinaten $(\rho_I,k_{\bar I})$ ist. Beispiel: Ein in $x$ kollimiertes, in $y$ fokussiertes Feld hat an der Brennlinie singuläre Projektionen auf $\R^2_\rho$ \emph{und} auf $\R^2_k$. Regulär ist dort die Karte $(x,k_y)$, numerisch also eine Fourier-Transformation nur in $y$. Maslovs kanonischer Operator setzt das Feld aus solchen Karten mit passenden Fourier-Integralen und Phasenkorrekturen zusammen~\cite{maslov1981,kravtsov1993,littlejohn1986}. Bei einem Punktfokus steht $\Lambda$ in der Fokusebene vollständig senkrecht zur $\rh$-Ebene; dann ist die reine Winkelkarte regulär.
+
+\subsection{Fokuskette PFT $\to$ Winkelspektrum $\to$ FFT ohne paraxiale Näherung}\label{sec:focus}
+Direkt hinter einer fokussierenden Optik habe das Feld im Bildraum (Brechzahl 1; für $n'\neq1$ ersetze $k_0\to n'k_0$) die Phase
+\begin{equation}
+    \psi(\rh,0) = -k_0\big(\sqrt{f^2+|\rh|^2}-f\big) + k_0W(\rh),
+    \label{eq:lens_exit_field}
+\end{equation}
+mit einer kleinen Aberration $W$, gemessen als optische Weglänge.
+
+\paragraph{Schritt 1: PFT an der Austrittsebene.} Für $W=0$ ist $\grad\psi=-k_0\rh/\sqrt{f^2+|\rh|^2}$, also $|\kp|=k_0\sin\theta$. Die Umkehrung lautet
+\begin{equation}
+    \rh_s(\kp) = -\frac{f\,\kp}{k_z(\kp)},\qquad k_z=\sqrt{k_0^2-|\kp|^2}=k_0\cos\theta .
+\end{equation}
+Die Legendre-Transformation ergibt exakt
+\begin{equation}
+    \tilde\psi(\kp) = \psi(\rh_s)-\kp\cdot\rh_s = k_0f - f\,k_z(\kp) + k_0W\big(\rh_s(\kp)\big) + \mathcal O(W^2).
+    \label{eq:exact_legendre}
+\end{equation}
+Der $W$-Term folgt aus der Störungsregel der Legendre-Transformation. Die Hesse-Matrix der sphärischen Phase hat die Eigenwerte $-k_0f^2/r^3$ (radial) und $-k_0/r$ (tangential) mit $r=f/\cos\theta$. Also gilt $|\det\Hess_\psi|^{-1/2}=f/(k_0\cos^2\theta)$ und $\sig\Hess_\psi=-2$. Die PFT \eqref{eq:pft_final} liefert
+\begin{equation}
+    \tilde{\bm E}(\kp,0) = -\frac{\ii f}{2\pi k_0\cos^2\theta}\,\bm U(\rh_s)\,\exp\!\big(\ii[k_0f-fk_z+k_0W(\rh_s)]\big).
+\end{equation}
+
+\paragraph{Schritt 2: Winkelspektrum bis $z=f+\delta z$.} Multiplikation mit $\ee^{\ii k_z(f+\delta z)}$ hebt den Term $-fk_z$ \emph{exakt} auf, ohne paraxiale Näherung:
+\begin{equation}
+    \tilde{\bm E}(\kp,f+\delta z) = -\frac{\ii f\,\ee^{\ii k_0f}}{2\pi k_0}\,\frac{\bm U(\rh_s(\kp))\,\ee^{\ii k_0W(\rh_s(\kp))}}{\cos^2\theta}\,\ee^{\ii k_z\delta z}.
+    \label{eq:phase_cancellation}
+\end{equation}
+Die verbleibende Phase $k_0W$ ist schwach gekrümmt. Die inverse PFT ist hier unbrauchbar, weil $\det\Hess_{\tilde\psi}\approx0$; der Punktfokus ist in der Winkelkarte regulär.
+
+\paragraph{Schritt 3: Volles Rücktransformations-Integral.}
+\begin{equation}
+    \boxed{\;\bm E(\rh,f+\delta z) = -\frac{\ii f\,\ee^{\ii k_0f}}{2\pi k_0}\iint_{|\kp|\le k_0\NA}\frac{\bm U\big(\rh_s(\kp)\big)\,\ee^{\ii k_0W(\rh_s(\kp))}}{\cos^2\theta}\,\ee^{\ii(\kp\cdot\rh+k_z\delta z)}\,\dd^2k_\perp\;}
+    \label{eq:debye}
+\end{equation}
+Das ist das Debye-Integral~\cite{bornwolf1999,stamnes1986}. Mit dem Raumwinkelelement $\dd\Omega=\dd^2k_\perp/(k_0^2\cos\theta)$ und dem Feld auf der Gaußschen Referenzkugel, $\bm E_\text{Kugel}=\bm U/\cos\theta$ (Abstandsverhältnis $r/f$ entlang des Strahls), geht \eqref{eq:debye} in die Standardform $-\frac{\ii k_0}{2\pi}\iint f\,\bm E_\text{Kugel}\,\ee^{\ii k_0\hat{\bm s}\cdot\bm r}\dd\Omega$ über. In vektorieller Form, mit $\bm U\in\mathbb C^3$, und für ein aplanatisches System, dessen Austrittsfeld über \eqref{eq:interface_amplitude} aus dem Eintrittsfeld folgt, entspricht dies der Darstellung von Richards und Wolf~\cite{wolf1959,richards1959}. Paraxial ($\cos\theta\to1$, $k_z\approx k_0-|\kp|^2/(2k_0)$) entsteht die bekannte Fraunhofer-artige Fokusformel.
+
+\paragraph{Konsistenzwarnung.} Kombiniert man eine parabolische Linsenphase $-k_0|\rh|^2/(2f)$ mit dem exakten $k_z$, bleibt die Restphase $f\big(k_z-k_0+|\kp|^2/(2k_0)\big)\approx-f|\kp|^4/(8k_0^3)$ stehen. Für $f=25\,\text{mm}$, $\NA=0{,}5$ und $\lambda_0=500\,\text{nm}$ sind das am Rand etwa $-2{,}8\times10^3\,\text{rad}$, also rund 450 Wellenlängen. Linsenphase und Ausbreitungsoperator müssen daher in derselben Näherungsstufe formuliert sein.
+
+\paragraph{Gültigkeit und Numerik.} Die Debye-Darstellung erfordert eine große Fresnel-Zahl $N_F=a^2/(\lambda_0f)\gg1$ der Apertur mit Radius $a$~\cite{wolfli1981}. Das ist dieselbe Bedingung, unter der die PFT in Schritt~1 gilt. Die numerische Auswertung von \eqref{eq:debye} mit FFT bzw. Chirp-z-Transformation ist etabliert~\cite{leutenegger2006}. Die FFT approximiert das Integral; an der scharfen Berandung $|\kp|=k_0\NA$ konvergiert sie nur mit erster Ordnung in der Schrittweite. Eine subpixelgenau gewichtete oder leicht geglättete Berandung verbessert das deutlich (vgl.~\cite{leutenegger2006} und Abschnitt~\ref{sec:sft}).
+
+\paragraph{Gouy-Phase.} Propagiert man statt mit \eqref{eq:debye} rein geometrisch durch den Fokus, so wechseln beide Eigenwerte von $\partial\rh_2/\partial\rh_1$ das Vorzeichen. Dann ist $\mu=2$ in \eqref{eq:jacobian_amplitude}, also ein Phasensprung von $-\pi$.
+
+% ============================================================================
+\section{Blendenkanten, Randstrahlen und SFT}\label{sec:edges}
+% ============================================================================
+
+Eine Blende $\Omega\subset\R^2$ wird durch Multiplikation mit $\chi_\Omega$ modelliert ($1$ in $\Omega$, $0$ sonst). Das entspricht Kirchhoff-Randbedingungen. Reale Schirme haben abweichende Kantenbeugungskoeffizienten~\cite{keller1962}; numerische Verfahren, die mit $\chi_\Omega$ multiplizieren, implementieren das Kirchhoff-Modell.
+
+\subsection{Eindimensionales Modell}
+Wir betrachten
+\begin{equation}
+    \tilde E(k_x) = \frac{1}{2\pi}\int_{-\infty}^{x_e}U(x)\,\ee^{\ii\Phi(x;k_x)}\,\dd x,\qquad \Phi=\psi(x)-k_xx,
+    \label{eq:edge_integral}
+\end{equation}
+mit dem Randstrahl $k_{x,\text{R}}=\psi'(x_e)$.
+
+\subsubsection{Fall 1: weit weg vom Randstrahl -- Kantenwelle}
+Ist $k_x\neq k_{x,\text{R}}$ und liegt der stationäre Punkt $x_s$ außerhalb des Integrationsgebiets (geometrischer Schatten, $x_s>x_e$), so liefert die PFT null. Partielle Integration mit $\ee^{\ii\Phi}=(\ii\Phi')^{-1}(\ee^{\ii\Phi})'$ ergibt
+\begin{equation}
+    \tilde E_\text{R}(k_x) \simeq \frac{1}{2\pi\ii}\,\frac{U(x_e)}{\psi'(x_e)-k_x}\,\ee^{\ii[\psi(x_e)-k_xx_e]}\,\big[1+\mathcal O(k_0^{-1})\big].
+    \label{eq:keller_gtd}
+\end{equation}
+Im beleuchteten Bereich ($x_s<x_e$) tritt derselbe Term zusätzlich zum PFT-Beitrag auf. Gleichung~\eqref{eq:keller_gtd} beschreibt die Randbeugungswelle im Sinne von Young, Maggi und Rubinowicz~\cite{rubinowicz1917,miyamoto1962a} bzw. die gebeugten Strahlen der geometrischen Beugungstheorie~\cite{keller1962}. Im Phasenraum fasert $\Lambda$ an $x=x_e$ in einen Fächer entlang der $k_x$-Achse auf.
+
+\subsubsection{Fall 2: nahe am Randstrahl -- gleichmäßige Fresnel-Lösung}
+Für $k_x\to k_{x,\text{R}}$ geht der Nenner in \eqref{eq:keller_gtd} gegen null; der stationäre Punkt (1.~Art) kollidiert mit dem Randpunkt (2.~Art). Quadratische Entwicklung um $x_s$ und die Substitution $\tau=\sqrt{|\psi''|/2}\,(x-x_s)$ ergeben
+\begin{equation}
+    \boxed{\;\tilde E(k_x) \simeq \tilde E_\text{PFT}(k_x)\cdot\tfrac12\erfc\!\Big(\ee^{-\ii\frac\pi4\sgn\psi''}\sqrt{\tfrac{|\psi''(x_s)|}{2}}\,(x_s-x_e)\Big)\;}
+    \label{eq:fresnel_edge}
+\end{equation}
+Auf der Schattengrenze ($x_s=x_e$) ist $\tfrac12\erfc(0)=\tfrac12$. Die Amplitude ist also halbiert, die Intensität beträgt ein Viertel des geometrischen Werts: Die Blende schneidet die Gauß-Glocke der ersten Fresnel-Zone in der Mitte. Für $x_s<x_e$ entstehen die Fresnel-Oszillationen (hier im Winkelspektrum).
+
+\paragraph{Konsistenz beider Fälle.} Für $x_s>x_e$ und großes Argument $z$ gilt $\tfrac12\erfc(z)\approx\ee^{-z^2}/(2\sqrt\pi z)$, gültig für $|\arg z|<3\pi/4$. Einsetzen in \eqref{eq:fresnel_edge} mit $\Phi(x_e)\approx\Phi(x_s)+\tfrac12\psi''(x_e-x_s)^2$ und $\psi'(x_e)-k_x\approx\psi''\,(x_e-x_s)$ reproduziert \eqref{eq:keller_gtd} \emph{exakt}, einschließlich Vorfaktor $1/(2\pi\ii)$ und Phase. Für $x_s<x_e$ liefert $\erfc(z)=2-\erfc(-z)$ den vollen PFT-Beitrag plus dieselbe Kantenwelle. Gleichung~\eqref{eq:fresnel_edge} ist also die gleichmäßige Näherung, die beide Grenzfälle enthält.
+
+\subsection{Zweidimensionale Blenden: kritische Punkte 2. und 3. Art}
+Mit $\bm F=\bm U\,\grad\Phi/(\ii|\grad\Phi|^2)$ gilt die Identität $\bm U\ee^{\ii\Phi}=\nabla\cdot(\bm F\ee^{\ii\Phi})-\ee^{\ii\Phi}\nabla\cdot\bm F$. Abseits stationärer Punkte folgt mit dem Gaußschen Satz
+\begin{equation}
+    \iint_\Omega\bm U\,\ee^{\ii\Phi}\,\dd^2\rho \simeq \sum_{\rh_s\in\Omega}(\text{PFT-Beiträge}) + \oint_{\partial\Omega}\frac{\bm U\,(\bm\nu\cdot\grad\Phi)}{\ii\,|\grad\Phi|^2}\,\ee^{\ii\Phi}\,\dd l,
+    \label{eq:bdw}
+\end{equation}
+mit der äußeren Normalen $\bm\nu$. Das ist eine Randbeugungswellen-Darstellung im Sinne von Maggi-Rubinowicz bzw. Miyamoto-Wolf~\cite{miyamoto1962a,miyamoto1962b}. Für eindimensionale Ränder reduziert sie sich auf \eqref{eq:keller_gtd}. Das Linienintegral ist selbst oszillierend; es wird von den Punkten dominiert, an denen die Phase längs des Randes stationär ist, $\hat{\bm t}\cdot\grad\Phi=0$, für die Fourier-Transformation also $\hat{\bm t}\cdot(\grad\psi-\kp)=0$. Das sind die kritischen Punkte 2.~Art nach van Kampen~\cite{vankampen1949}; Ecken sind kritische Punkte 3.~Art. Ein Punkt 2.~Art liefert einen Beitrag relativ zum geometrischen Anteil der Ordnung $k_0^{-1/2}$, eine Ecke der Ordnung $k_0^{-1}$. Nicht die ganze Kante strahlt also in eine gegebene Richtung $\kp$, sondern nur diese isolierten Punkte.
+
+\subsection{Randbeugung im Fokus: Airy-Muster}
+Beim Fokussieren mit PFT und Rück-FFT (Abschnitt~\ref{sec:focus}) bildet die PFT den Aperturrand $|\rh|=a$ auf die Berandung $|\kp|=k_0\NA$ ab. Das Rückintegral \eqref{eq:debye} über diesen Kreis enthält die Randbeugung vollständig. Für konstantes Integrand-Gewicht gilt
+\begin{equation}
+    \iint_{|\kp|\le K}\ee^{\ii\kp\cdot\rh}\,\dd^2k_\perp = 2\pi K^2\,\frac{J_1(K\rho)}{K\rho},\qquad K=k_0\NA .
+\end{equation}
+Die Kantenwelle \eqref{eq:keller_gtd} der Hin-Transformation darf hier vernachlässigt werden, solange $N_F\gg1$: Sie liefert die Korrekturen, die bei kleinen Fresnel-Zahlen zur Fokusverschiebung führen~\cite{wolfli1981}.
+
+\subsection{Semi-analytische Fourier-Transformation (SFT)}\label{sec:sft}
+Außerhalb des Fokus würde eine Kombination aus PFT und inverser PFT die Randterme \eqref{eq:fresnel_edge} verlieren. Die SFT~\cite{wang2018,wang2019} spaltet einen quadratischen Phasenanteil mit konstanter, symmetrischer, invertierbarer Krümmungsmatrix $\bm C$ analytisch ab:
+\begin{equation}
+    \bm E(\rh) = \bm V(\rh)\,\ee^{\frac\ii2\rh^T\bm C\rh},\qquad \bm V = \chi_\Omega\,\bm U\,\ee^{\ii\psi_\text{res}},\quad \grad\psi_\text{res}\ \text{klein}.
+\end{equation}
+Quadratische Ergänzung, $\tfrac12\rh^T\bm C\rh-\kp\cdot\rh=\tfrac12(\rh-\bm C^{-1}\kp)^T\bm C(\rh-\bm C^{-1}\kp)-\tfrac12\kp^T\bm C^{-1}\kp$, liefert die exakte Umformung
+\begin{equation}
+    \tilde{\bm E}(\kp) = \frac{\ee^{-\frac\ii2\kp^T\bm C^{-1}\kp}}{(2\pi)^2}\;\bm W\big(\bm C^{-1}\kp\big),
+    \qquad
+    \bm W = \bm V * g_C,\quad g_C(\rh)=\ee^{\frac\ii2\rh^T\bm C\rh}.
+\end{equation}
+$\bm W$ ist eine virtuelle Fresnel-Propagation von $\bm V$ und wird mit dem Faltungssatz und zwei FFTs berechnet:
+\begin{equation}
+    \boxed{\;\tilde{\bm E}(\kp) = \frac{\ee^{-\frac\ii2\kp^T\bm C^{-1}\kp}}{(2\pi)^2}\;
+    \F^{-1}\Big\{\F\{\bm V\}(\bm\kappa)\cdot\frac{2\pi\,\ee^{\ii\frac\pi4\sig\bm C}}{\sqrt{|\det\bm C|}}\,\ee^{-\frac\ii2\bm\kappa^T\bm C^{-1}\bm\kappa}\Big\}\big(\bm C^{-1}\kp\big)\;}
+    \label{eq:sft_formula}
+\end{equation}
+
+\paragraph{Eigenschaften.}
+\begin{itemize}
+    \item \emph{PFT-Grenzfall:} Für glattes $\bm V$ ohne Rand ist $\bm W(\rh')\approx\bm V(\rh')\cdot2\pi\ee^{\ii\frac\pi4\sig\bm C}/\sqrt{|\det\bm C|}$. Dann wird \eqref{eq:sft_formula} identisch mit \eqref{eq:pft_final} für $\psi=\frac12\rh^T\bm C\rh$, mit $\rh_s=\bm C^{-1}\kp$ und $\tilde\psi=-\frac12\kp^T\bm C^{-1}\kp$.
+    \item \emph{Hybride Darstellung bleibt erhalten:} Das Ergebnis hat wieder die Form „glattes Restfeld $\times$ analytische Phase“. Die Phase $-\frac12\kp^T\bm C^{-1}\kp$ wird nicht abgetastet, und $\bm W$ liegt auf dem Gitter $\kp=\bm C\rh'$ vor.
+    \item \emph{Kanten:} Die Faltung des Sprungs $\chi_\Omega$ mit $g_C$ erzeugt am Rand genau die Fresnel-Integrale \eqref{eq:fresnel_edge}.
+    \item \emph{Phasenraum:} Die Multiplikation mit einem Chirp ist eine Scherung in $\kp$-Richtung, die Faltung mit einem Chirp eine Scherung in $\rh$-Richtung. Die SFT zerlegt also die Fourier-Transformation in Scherungen und eine Skalierung, von denen nur die gutmütigen numerisch ausgeführt werden.
+\end{itemize}
+
+\paragraph{Abtastbedingungen} (für eine Eigenrichtung von $\bm C$ mit Eigenwert $c$).
+\begin{itemize}
+    \item \emph{Kantenauflösung:} Die Fresnel-Struktur von $\bm W$ am Rand hat die Breite $w_c=\sqrt{2/|c|}$. Erforderlich ist $\Delta x\ll w_c$. Für einen harten Rand konvergiert der Fehler nur mit erster Ordnung in $\Delta x$; eine subpixelgenau gewichtete Blende verkleinert die Konstante.
+    \item \emph{Transferfunktion:} Der Chirp $\ee^{-\frac\ii2\kappa^2/c}$ ist bis $\kappa_{\max}=\pi/\Delta x$ hinreichend abgetastet, wenn das Rechenfenster $L\ge2\pi/(|c|\,\Delta x)$ erfüllt. Zusätzlich muss $L$ Blende plus Beugungsaufweitung ohne zyklischen Überlauf fassen.
+    \item \emph{Aufwand:} Die direkte FFT braucht $N\gtrsim|c|\,a\,L/\pi$ Punkte pro Richtung. Die SFT braucht $N\approx L/\Delta x$ mit $\Delta x$ als Bruchteil von $w_c\propto|c|^{-1/2}$. Der Gewinn wächst daher wie $\sqrt{|c|}\,a$ pro Richtung.
+    \item Ist ein Eigenwert von $\bm C$ klein oder null, wird in dieser Richtung gewöhnlich transformiert (gemischte Karte, Abschnitt~\ref{sec:charts}).
+\end{itemize}
+
+\paragraph{Voruntersuchung (1D-Modell).} Für $c=10^5\,\text{mm}^{-2}$, Blendenhalbbreite $a=1\,\text{mm}$ und eine Gaußsche Amplitude erfordert die direkte Abtastung etwa $6{,}4\times10^4$ Punkte. Die SFT nach \eqref{eq:sft_formula} ($w_c\approx4{,}5\,\mu\text{m}$, Fenster $L=4\,\text{mm}$) ergab im Vergleich mit einer hochaufgelösten Quadratur folgende maximale relative Fehler:
+\begin{center}
+\small
+\begin{tabular}{rrcc}
+\toprule
+$N$ & $\Delta x$ & harte Blende & subpixelgewichtete Blende\\
+\midrule
+4096 & $0{,}98\,\mu$m & $1{,}9\,\%$ & $0{,}58\,\%$\\
+16384 & $0{,}24\,\mu$m & $0{,}46\,\%$ & $0{,}18\,\%$\\
+65536 & $0{,}06\,\mu$m & $0{,}13\,\%$ & $0{,}07\,\%$\\
+\bottomrule
+\end{tabular}
+\end{center}
+Die erste Konvergenzordnung an der harten Kante ist deutlich sichtbar. In zwei Dimensionen quadrieren sich die Punktzahlen.
+
+% ============================================================================
+\section{Synthese: Auswahl, Verkettung und Fehlerbudget}\label{sec:synthesis}
+% ============================================================================
+
+Die Abschnitte~\ref{sec:rays}--\ref{sec:edges} liefern Bausteine mit jeweils eigenen Gültigkeitsbedingungen. Dieses Kapitel fasst sie zu einer Arbeitsanleitung zusammen: welcher Baustein an welcher Stelle eingesetzt wird (Abschnitt~\ref{sec:selection}), wie die Bausteine verkettet werden (Abschnitt~\ref{sec:chaining}), welche Fehler sie verursachen (Abschnitt~\ref{sec:errors}) und was sie kosten (Abschnitt~\ref{sec:cost}). Ein durchgerechnetes Beispiel (Abschnitt~\ref{sec:example}) und eine Zuordnungstabelle (Abschnitt~\ref{sec:mapping}) schließen das Kapitel ab.
+
+\subsection{Lokale Kennzahlen und Auswahlregeln}\label{sec:selection}
+An einem Punkt $\rh$ der Wellenfront seien $h_1,h_2$ die Eigenwerte von $\Hess_\psi(\rh)$ mit den Eigenvektoren $\bm e_1,\bm e_2$. Wir definieren drei Kennzahlen:
+\begin{itemize}
+    \item die Fresnel-Zonenbreite $w_j=|h_j|^{-1/2}$ in Richtung $\bm e_j$,
+    \item die lokale Fresnel-Zahl $F_j=|h_j|\,L_U^2$, wobei $L_U$ die Längenskala ist, auf der sich $\bm U$ ändert,
+    \item den Kantenabstand $d_e$ des stationären Punkts zur nächsten Blendenkante.
+\end{itemize}
+Für eine fokussierende Linse ist im Zentrum $h_{1,2}=k_0/f$. Mit $L_U=a$ wird $F=k_0a^2/f=2\pi N_F$; die lokale Fresnel-Zahl verallgemeinert also die Fresnel-Zahl der Apertur.
+
+Aus den Abschnitten~\ref{sec:pft} und~\ref{sec:edges} folgen zwei Fehlerabschätzungen. Die stationäre Phase (PFT, geometrische Propagation) hat relative Korrekturen der Ordnung $1/F_j$. Die vernachlässigte Kantenwelle hat, bezogen auf den geometrischen Anteil, nach der Asymptotik von \eqref{eq:fresnel_edge} mit $|z|=d_e/(\sqrt2\,w)$ den Betrag
+\begin{equation}
+    \frac{|\tilde E_\text{R}|}{|\tilde E_\text{PFT}|} \approx \frac{1}{2\sqrt\pi\,|z|} = \frac{w}{\sqrt{2\pi}\,d_e}.
+    \label{eq:edge_ratio}
+\end{equation}
+Der Kanteneinfluss fällt also nur algebraisch ab, nicht exponentiell. Bei einer Toleranz $\varepsilon$ ist eine Kante erst ab $d_e\ge w/(\sqrt{2\pi}\,\varepsilon)$ vernachlässigbar; für $\varepsilon=1\,\%$ sind das etwa $40\,w$.
+
+Daraus ergeben sich die Auswahlregeln in Tabelle~\ref{tab:selection}. Für inverse Transformationen gelten dieselben Regeln, wobei die Hesse-Matrix der Winkelphase $\tilde\psi$ die Rolle von $\Hess_\psi$ übernimmt.
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.6cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{4.6cm}}
+\toprule
+Situation & Kriterium (Toleranz $\varepsilon$) & Baustein\\
+\midrule
+Grenzfläche & Krümmungsradien von Fläche und Wellenfront $\gg\lambda$ & LPIA, Gl.~\eqref{eq:interface_amplitude}\\
+\addlinespace
+stark gekrümmt, kantenfern & $F_j\gg1/\varepsilon$ und $d_e\ge w/(\sqrt{2\pi}\,\varepsilon)$ & PFT \eqref{eq:pft_final} bzw.\ geometrische Propagation \eqref{eq:jacobian_amplitude}\\
+\addlinespace
+stark gekrümmt, kantennah & $F_j\gg1$, aber $d_e< w/(\sqrt{2\pi}\,\varepsilon)$ & SFT \eqref{eq:sft_formula} oder erfc-Korrektur \eqref{eq:fresnel_edge}\\
+\addlinespace
+schwach gekrümmt & $F_j\lesssim1$ bzw.\ Nyquist-Punktzahl klein & direkte FFT\\
+\addlinespace
+gemischt & $F_1\gg1$, $F_2\lesssim1$ & gemischte Karte: PFT/SFT entlang $\bm e_1$, Ortsraum entlang $\bm e_2$\\
+\addlinespace
+Ziel nahe einer Kaustik & $|J|\to0$ im Zielgebiet; Kaustikbereich lateral $\sim\lambda/\NA$, axial $\sim\lambda/\NA^2$ & Winkelkarte und volles Rückintegral (FFT), Gl.~\eqref{eq:debye}\\
+\addlinespace
+Fokus mit kleiner Fresnel-Zahl & $N_F\lesssim10$ & Rayleigh-Sommerfeld \eqref{eq:rs_kernel} statt Debye\\
+\bottomrule
+\end{tabularx}
+\caption{Auswahlregeln für die Bausteine. Für Rücktransformationen wird $\Hess_\psi$ durch $\Hess_{\tilde\psi}$ ersetzt.}
+\label{tab:selection}
+\end{table}
+
+\subsection{Verkettung: Invarianz der hybriden Darstellung}\label{sec:chaining}
+Jeder Baustein bildet ein Feld der Form „Restfeld $\times$ Phasenfaktor“ wieder auf diese Form ab. Tabelle~\ref{tab:chaining} listet für jeden Operator die neue Phase, das neue Restfeld, den Träger der Daten und die Genauigkeit.
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}p{2.3cm}}
+\toprule
+Operator & neue Phase & neues Restfeld & Träger & Genauigkeit\\
+\midrule
+geometrische Propagation & $\psi_1+k_0\Sc$ & $\bm U_1|J|^{-1/2}\ee^{-\ii\frac\pi2\mu}$ & mitbewegte Punktwolke & $\mathcal O(1/F)$\\
+\addlinespace
+LPIA & $\psi+k_0\ell$ & Gl.~\eqref{eq:interface_amplitude} & Punktwolke & LPIA-Gültigkeit\\
+\addlinespace
+Blende & unverändert & $\chi_\Omega\bm U$ & unverändert & Kirchhoff-Modell\\
+\addlinespace
+PFT & $\psi(\rh_s)-\kp\cdot\rh_s$ & $\dfrac{\bm U(\rh_s)\,\ee^{\ii\frac\pi4\sig\Hess_\psi}}{2\pi\sqrt{|\det\Hess_\psi|}}$ & Punktwolke im $\kp$-Raum & $\mathcal O(1/F)$\\
+\addlinespace
+Winkelspektrum & $\tilde\psi+k_z\Delta z$ & unverändert & beliebig & exakt\\
+\addlinespace
+SFT & $-\frac12\kp^T\bm C^{-1}\kp$ & $\bm W(\bm C^{-1}\kp)/(2\pi)^2$ & Gitter $\kp=\bm C\rh'$ & exakt bis auf Diskretisierung\\
+\addlinespace
+FFT & $0$ (bzw.\ linear) & gesamtes Feld & äquidistantes Gitter & exakt bis auf Diskretisierung\\
+\bottomrule
+\end{tabularx}
+\caption{Wirkung der Operatoren auf die hybride Darstellung $\bm U\ee^{\ii\psi}$.}
+\label{tab:chaining}
+\end{table}
+
+Drei Folgerungen sind für die Implementierung wichtig:
+\begin{itemize}
+    \item \emph{Die Winkelspektrum-Ausbreitung ist in jeder Darstellung exakt.} Sie wirkt punktweise im $\kp$-Raum und ändert nur die Phase. Sie kann daher auf einer Punktwolke ebenso ausgeführt werden wie auf einem Gitter. Approximationsfehler entstehen ausschließlich in PFT, geometrischer Propagation und LPIA; SFT und FFT tragen nur Diskretisierungsfehler bei.
+    \item \emph{Beim Wechsel von Punktwolke zu Gitter wird nur $\bm U$ interpoliert.} Die Phase $\psi$ wird an den Gitterpunkten ausgewertet, analytisch oder über ihren Spline. Interpoliert man stattdessen $\ee^{\ii\psi}$ oder das Gesamtfeld, kehrt das Abtastproblem aus Abschnitt~\ref{sec:sampling} als Aliasing zurück.
+    \item \emph{Inverse Transformationen sind symmetrisch.} Inverse PFT und inverse SFT entstehen durch Vertauschen der Rollen von $\rh$ und $\kp$ und Vorzeichenwechsel im Exponenten. Ihre Gültigkeit wird mit den Kennzahlen der Winkelphase $\tilde\psi$ geprüft.
+\end{itemize}
+
+\subsection{Fehlerbudget}\label{sec:errors}
+Tabelle~\ref{tab:errors} sammelt die Fehlerquellen aus den vorigen Abschnitten. Im Gesamtsystem dominiert der größte Einzelterm. Es lohnt daher, ihn für eine konkrete Rechnung zu identifizieren, statt alle Terme gleichmäßig zu verkleinern.
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.4cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.7cm} >{\raggedright\arraybackslash}p{3.4cm}}
+\toprule
+Fehlerquelle & Größenordnung & Kontrollgröße & Abhilfe\\
+\midrule
+Stationäre Phase (PFT, Strahlen) & $\mathcal O(1/F_j)$ & $F_j$ & SFT oder FFT\\
+\addlinespace
+Vernachlässigte Kantenwelle & $w/(\sqrt{2\pi}\,d_e)$, Gl.~\eqref{eq:edge_ratio}; in 2D am kritischen Punkt 2.~Art relativ $\mathcal O(k_0^{-1/2})$ & $d_e/w$ & SFT, erfc-Korrektur\\
+\addlinespace
+Ecken (kritische Punkte 3.~Art) & relativ $\mathcal O(k_0^{-1})$ & -- & meist vernachlässigbar\\
+\addlinespace
+Geometrische Propagation nahe Kaustik & divergiert für $J\to0$ & Abstand zur Kaustik vs.\ $\lambda/\NA$, $\lambda/\NA^2$ & Winkelkarte\\
+\addlinespace
+Debye-Näherung & wächst mit fallendem $N_F$~\cite{wolfli1981} & $N_F$ & Rayleigh-Sommerfeld\\
+\addlinespace
+LPIA & abhängig von Krümmungsradius$/\lambda$~\cite{vonpfeil2000} & $R_c/\lambda$ & lokal rigoroser Löser\\
+\addlinespace
+Sequenzielle Kette & Geisterbild\-amplitude $\sim|r_ir_j|$ (unvergütetes Glas: $|r|\approx0{,}2$, also $\approx0{,}04$) & Reflexionsgrade & nicht-sequenzielle Iteration\\
+\addlinespace
+Harte Kante auf Gitter & $\mathcal O(\Delta x)$, vgl.\ Tabelle in Abschnitt~\ref{sec:sft} & $\Delta x/w_c$ & Subpixel-Gewichtung, feineres Gitter\\
+\addlinespace
+Interpolation Punktwolke $\to$ Gitter & Ordnung des Interpolationsverfahrens & Stützstellen\-abstand $/L_U$ & höhere Ordnung, dichtere Wolke\\
+\addlinespace
+Aliasing der SFT-Transferfunktion & sprunghaft bei Verletzung & $L|c|\Delta x/(2\pi)\ge1$ & größeres Rechenfenster\\
+\bottomrule
+\end{tabularx}
+\caption{Fehlerbudget der Bausteine.}
+\label{tab:errors}
+\end{table}
+
+\subsection{Aufwand}\label{sec:cost}
+Pro Raumrichtung gilt für ein Rechenfenster der Länge $L$ und eine Apertur der Halbbreite $a$:
+\begin{itemize}
+    \item \emph{Direkte FFT:} $N_\text{FFT}\approx L\,|\grad\psi|_{\max}/\pi\approx|h|\,a\,L/\pi$ (Nyquist der Gesamtphase).
+    \item \emph{SFT:} $N_\text{SFT}\approx L/\Delta x$ mit $\Delta x=\min\big(w_c/q,\ \pi/\max|\grad\psi_\text{res}|\big)$. Dabei ist $w_c=\sqrt{2/|c|}$, und der Faktor $q$ legt die Genauigkeit fest; nach der Tabelle in Abschnitt~\ref{sec:sft} entspricht $q\approx5$ etwa $2\,\%$ und $q\approx20$ etwa $0{,}5\,\%$ Fehler bei harter Kante.
+    \item \emph{PFT:} unabhängig von $\lambda$. Die Zahl der Stützstellen ist durch die Glattheit von $\psi$ und $\bm U$ bestimmt.
+    \item \emph{FFT im Fokus:} $N\approx2\,\NA\,L_F/\lambda$ für ein Fokusfenster der Breite $L_F$. Ein feineres Ausgabegitter erhält man durch Nullauffüllung oder Chirp-z-Transformation~\cite{leutenegger2006}.
+\end{itemize}
+Ohne Restphase ($\grad\psi_\text{res}=0$) ist der Gewinn der SFT gegenüber der direkten FFT
+\begin{equation}
+    \frac{N_\text{FFT}}{N_\text{SFT}} \approx \frac{\sqrt{2F_a}}{\pi q},\qquad F_a=|h|\,a^2=2\pi N_F .
+    \label{eq:sft_gain}
+\end{equation}
+Die SFT lohnt sich also erst ab $F_a\gtrsim(\pi q)^2/2$, für $q=10$ etwa ab $N_F\gtrsim10^2$. Bei hoher numerischer Apertur begrenzt zusätzlich der nicht-quadratische Anteil der Phase die Schrittweite. Die Krümmung $c$ wird dann so gewählt, dass $\max|\grad\psi_\text{res}|$ minimal wird (Minimax-Anpassung), nicht als paraxiale Scheitelkrümmung. In zwei Dimensionen quadrieren sich alle Punktzahlen.
+
+\subsection{Durchgerechnetes Beispiel}\label{sec:example}
+Wir verwenden die Linse aus Abschnitt~\ref{sec:sampling}: $D=25\,$mm ($a=12{,}5\,$mm), $\NA=0{,}5$, $\lambda_0=500\,$nm, also $f=a/\tan\theta_{\max}=21{,}65\,$mm. Die Linse sei aplanatisch, wird mit einem homogenen, kollimierten Strahl beleuchtet und hat eine harte Blende vom Radius $a$ in der Austrittsebene. Gesucht sind das Feld im Fokusbereich und das Feld in der Zwischenebene $z=f/2$. Die Kennzahlen sind:
+\begin{center}
+\small
+\begin{tabular}{ll}
+\toprule
+$k_0$ & $1{,}257\times10^4\,\text{mm}^{-1}$\\
+$h=k_0/f$ (Zentrum) & $580\,\text{mm}^{-2}$ (am Rand radial $377$, tangential $503\,\text{mm}^{-2}$)\\
+$w=h^{-1/2}$ & $41{,}5\,\mu$m\\
+$N_F=a^2/(\lambda_0f)$ & $1{,}44\times10^4$\\
+$F_a=2\pi N_F$ & $9{,}07\times10^4$\\
+kantennahe Zone ($\varepsilon=1\,\%$) & $d_e\lesssim40\,w\approx1{,}7\,$mm\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Schritt 1: Beleuchtung bis zur Linse.} Das Feld ist kollimiert, $\psi=0$ und $\det\Hess_\psi=0$. Die PFT ist hier unzulässig. Die Ausbreitung erfolgt exakt mit dem Winkelspektrum oder ist bei homogener Beleuchtung trivial.
+
+\paragraph{Schritt 2: Linsenflächen.} LPIA an jeder Fläche, dazwischen geometrische Propagation im Glas. Beides ist zulässig: Die Krümmungsradien liegen im Millimeterbereich, also $\gg\lambda$, und $F$ ist sehr groß. Ergebnis ist die sphärische Phase \eqref{eq:lens_exit_field} mit dem nach \eqref{eq:interface_amplitude} apodisierten Restfeld $\bm U$. Danach wird die Blende angewandt: $\bm U\to\chi_\Omega\bm U$.
+
+\paragraph{Schritt 3a: Fokusbereich.} Wir verwenden die PFT über die gesamte Austrittsebene. Die kantennahe Zone von etwa $1{,}7\,$mm Breite muss hier \emph{nicht} gesondert behandelt werden: Nach Abschnitt~\ref{sec:edges} wird die Randbeugung im Fokus durch die scharfe Berandung $|\kp|=k_0\NA$ im Rückintegral erfasst, und der Debye-Fehler ist bei $N_F=1{,}44\times10^4$ vernachlässigbar. Danach folgt das Winkelspektrum (exakt) und das Rückintegral \eqref{eq:debye} per FFT mit subpixelgenau gewichteter Berandung. Für ein Fokusfenster $L_F=20\,\mu$m genügen nominell $N=2\NA L_F/\lambda=40$ Punkte pro Richtung; mit Nullauffüllung auf etwa $256$ Punkte wird das Airy-Scheibchen (Radius $0{,}61\lambda/\NA\approx0{,}6\,\mu$m, axiale Ausdehnung $\sim4\,\mu$m) fein aufgelöst.
+
+\paragraph{Schritt 3b: Zwischenebene $z=f/2$.} Die Zielebene liegt fern der Kaustik, aber die kantennahe Zone erzeugt dort Fresnel-Ringe. Eine reine PFT/geometrische Rechnung würde an der Schattengrenze einen Amplitudenfehler von $50\,\%$ machen (Faktor $\tfrac12$ aus \eqref{eq:fresnel_edge}). Daher wird hin und zurück mit der SFT transformiert:
+\begin{itemize}
+    \item \emph{Hin-SFT:} Die Minimax-Anpassung ergibt $c=-521\,\text{mm}^{-2}$ (entspricht $f_\text{eff}=24{,}1\,$mm) mit Restgradient $\max|\grad\psi_\text{res}|=230\,\text{mm}^{-1}$. Die paraxiale Scheitelkrümmung $c=-k_0/f$ hätte $972\,\text{mm}^{-1}$ ergeben. Die Restphase verlangt $\Delta x\le13{,}7\,\mu$m, die Kantenauflösung mit $w_c=\sqrt{2/|c|}=62\,\mu$m und $q=10$ verlangt $\Delta x=6{,}2\,\mu$m. Mit $L=30\,$mm folgen etwa $4800$ Punkte pro Richtung, $2{,}3\times10^7$ insgesamt. Die direkte FFT bräuchte $6\times10^4$ pro Richtung, $3{,}6\times10^9$ insgesamt; das ist ein Faktor $\approx150$.
+    \item \emph{Winkelspektrum:} Multiplikation mit $\ee^{\ii k_zz}$, exakt und punktweise.
+    \item \emph{Rück-SFT:} Die quadratische Krümmung der Winkelphase $-\tfrac12\kp^T\bm C^{-1}\kp+k_zz$ ist paraxial $C'=1/|c|-z/k_0\approx1{,}06\times10^{-3}\,\text{mm}^2$. Das Ausgabegitter der Hin-SFT hat $\Delta k=|c|\Delta x\approx3{,}2\,\text{mm}^{-1}$. Das unterschreitet sowohl $w_k/10\approx4{,}3\,\text{mm}^{-1}$ (mit $w_k=\sqrt{2/C'}$) als auch die Nyquist-Grenze $3{,}75\,\text{mm}^{-1}$ des nicht-quadratischen Rests von $k_zz$ (Restgradient bis $0{,}84\,$mm). Das Gitter der Hin-SFT ist damit direkt für die Rück-SFT verwendbar.
+    \item Die Fresnel-Ringe in der Zwischenebene haben eine Breite von etwa $\sqrt{2C'}\approx46\,\mu$m und werden vom Ausgabegitter ($\Delta\rho=C'\Delta k\approx3{,}4\,\mu$m) gut aufgelöst.
+\end{itemize}
+
+\paragraph{Fehlerbudget des Beispiels.} Im Fokus dominieren die Diskretisierung der $\kp$-Berandung und die Interpolation von $\bm U$ auf das $\kp$-Gitter; Debye- und PFT-Fehler sind bei $N_F\approx10^4$ klein. In der Zwischenebene dominiert der Diskretisierungsfehler der SFT an der harten Kante, mit $q=10$ im Bereich von etwa $1\,\%$.
+
+\paragraph{Integrationstest.} Dasselbe System mit um den Faktor 10 verkleinerter Apertur ($N_F\approx144$) ist mit direkter Rayleigh-Sommerfeld-Integration berechenbar. Der Vergleich prüft die gesamte Kette einschließlich der Auswahlregeln aus Tabelle~\ref{tab:selection}.
+
+\subsection{Zuordnung zu den theoretischen Konzepten}\label{sec:mapping}
+Tabelle~\ref{tab:mapping} fasst zusammen, welchem asymptotischen und geometrischen Konzept jeder Baustein entspricht.
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.35}
+\small
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash\bfseries}p{2.9cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+\toprule
+Baustein & Strahlenbild & Asymptotik / Pfadintegral-Bild & Phasenraum $(\rh,\kp)$\\
+\midrule
+Verbundene Teillöser & Verkettung der Bauteil-Übergänge & Halbgruppe \eqref{eq:system_chain}; Zeitscheiben von \eqref{eq:phase_space_pi} & Verkettung kanonischer Abbildungen\\
+\addlinespace
+Hybride Zerlegung $\bm U\ee^{\ii\psi}$ & Strahlennetz mit Nachbarschafts-Maschen & Sattelpunkt + Gauß-Fluktuationen (Van Vleck) & Stützstellen auf der Lagrange-Fläche $\Lambda$\\
+\addlinespace
+Jacobi-Faktor $J=\dd A_2/\dd A_1$ & Helligkeit $\propto$ 1/Maschenfläche & $J=\det\Hess_\Theta/(k_0^2\det\bm B)$, Gl.~\eqref{eq:jacobian_relation} & Projektionsmaß von $\Lambda$ auf $\R^2_\rho$\\
+\addlinespace
+LPIA & Snellius + Fresnel pro Netzknoten & Exakte Lösung der ebenen Grenzfläche, lokal angewandt & Punktweise kanonische Abbildung (Impulsübertrag längs $\bm n$)\\
+\addlinespace
+PFT & Netz nach Winkeln statt Orten sortiert & Stationäre Phase, Legendre-Transformation & Kartenwechsel $\pi_\rho\to\pi_k$\\
+\addlinespace
+Fokus (PFT $\to$ SPW $\to$ FFT) & Strahlen kreuzen sich im Ort, nicht im Winkel & Entarteter Sattelpunkt; exakte Phasenkompensation; Debye-Integral & $\Lambda$ senkrecht über $\R^2_\rho$, regulär über $\R^2_k$\\
+\addlinespace
+Kanten, SFT & Abriss des Netzes erzeugt gebeugte Randstrahlen & Kritische Punkte 2./3.~Art; gleichmäßige erfc-Lösung & Scherung + virtuelle Fresnel-Propagation mit zwei FFTs\\
+\bottomrule
+\end{tabularx}
+\caption{Zuordnung der numerischen Bausteine zu asymptotischen und geometrischen Konzepten.}
+\label{tab:mapping}
+\end{table}
+
+% ============================================================================
+\section{Vorgeschlagene numerische Prüfungen}
+% ============================================================================
+
+Jede Herleitung dieses Berichts lässt sich mit einfachen Programmen gegen eine Referenz prüfen. Die folgenden Tests sind nach steigendem Aufwand geordnet; die angegebenen Ergebnisse stammen aus einer 1D-Voruntersuchung. Als abschließender Integrationstest dient das Beispiel aus Abschnitt~\ref{sec:example}.
+\begin{enumerate}
+    \item \textbf{Van-Vleck-Kern} \eqref{eq:van_vleck} gegen den exakten Kern \eqref{eq:rs_kernel}. Erwartet wird ein relativer Fehler $\sim1/(kr)$.
+    \item \textbf{Jacobi-Gesetz} \eqref{eq:jacobian_amplitude}: divergente Welle ($R_0=50\,$mm) mit Super-Gauß-Amplitude, Propagation um $d=30\,$mm mit dem Winkelspektrum. Voruntersuchung (1D) an drei Strahlen: $|E_2|$ numerisch $0{,}7906$, $0{,}7905$, $0{,}7606$; Vorhersage $0{,}7906$, $0{,}7904$, $0{,}7603$.
+    \item \textbf{Phasenkompensation} \eqref{eq:exact_legendre}: bei exakt sphärischer Phase Restfehler $<10^{-10}\,$rad (Rundung). Bei parabolischer Phase mit exaktem $k_z$ ergeben sich $-2819\,$rad am Rand.
+    \item \textbf{Debye vs.\ Rayleigh-Sommerfeld} für variierende Fresnel-Zahl: Abweichungen, insbesondere eine Fokusverschiebung, sollten für $N_F\lesssim10$ sichtbar werden.
+    \item \textbf{Kantenformel} \eqref{eq:fresnel_edge} gegen direkte Quadratur ($\psi''=2000$, $x_e=0{,}3$, Gauß-Amplitude): relative Fehler $0{,}1$--$0{,}9\,\%$ für $|x_s-x_e|\le0{,}05$.
+    \item \textbf{SFT} \eqref{eq:sft_formula} gegen Brute-Force-Quadratur mit Konvergenzstudie, siehe Tabelle in Abschnitt~\ref{sec:sft}.
+    \item \textbf{Maslov-Index}: Phasensprung $-\pi$ an einem Punktfokus und $-\pi/2$ an einer Brennlinie (zylindrische Linse).
+    \item \textbf{Fresnel-Operator} \eqref{eq:fresnel_operator}: Energieerhaltung $|r_{s,p}|^2+\frac{n_2\cos\theta_\text{a}}{n_1\cos\theta_\text{e}}|t_{s,p}|^2=1$ und Transversalität des Ausgangsfelds.
+\end{enumerate}
+
+% ============================================================================
+\section{Fazit}
+% ============================================================================
+
+Field Tracing lässt sich als systematische asymptotische Auswertung der Ausbreitungsintegrale der Wellenoptik verstehen. Das Pfadintegral liefert dafür ein einheitliches Bild.
+\begin{enumerate}
+    \item Wo isolierte, nicht entartete Sattelpunkte vorliegen und keine Ränder in die erste Fresnel-Zone schneiden, liefern LPIA, Strahlennetz und PFT das Feld in führender Ordnung in $1/k_0$. Die Amplitude folgt aus der Van-Vleck-Determinante, die sich in den Jacobi-Faktor des Strahlennetzes umrechnen lässt.
+    \item An Kaustiken wird die singuläre Ortsdarstellung durch eine reguläre Karte der Lagrange-Fläche ersetzt: Winkelkarte, bei astigmatischen Kaustiken gemischte Karte. Für einen Punktfokus liefert die Kette PFT $\to$ Winkelspektrum $\to$ FFT bei exakt sphärischer Wellenfront das Debye-Integral ohne paraxiale Näherung, gültig für $N_F\gg1$.
+    \item Blendenkanten erzeugen kritische Punkte 2. und 3.~Art. Die SFT ist eine exakte Umformung der Fourier-Transformation in zwei FFTs gutmütiger Funktionen. Ihr Fehler wird von der Auflösung der Fresnel-Struktur am Rand bestimmt.
+\end{enumerate}
+Alle Aussagen sind Näherungen mit angebbaren Gültigkeitsbedingungen. Aus ihnen folgen lokale Auswahlregeln (Tabelle~\ref{tab:selection}), ein Fehlerbudget (Tabelle~\ref{tab:errors}) und die Abschätzung \eqref{eq:sft_gain}, ab wann sich die SFT lohnt. Die vorgeschlagenen Testfälle erlauben, sie und ihre Implementierung quantitativ zu überprüfen.
+
+% ============================================================================
+\begin{thebibliography}{99}
+% ============================================================================
+
+\bibitem{arnold1967} V.\,I.~Arnol'd, „Characteristic class entering in quantization conditions“, \emph{Funct.\ Anal.\ Appl.}\ \textbf{1}, 1--13 (1967), doi:10.1007/BF01075861.
+
+\bibitem{baladron2018} O.~Baladron-Zorita, Z.~Wang, C.~Hellmann, F.~Wyrowski, „The Gouy phase shift reinterpreted via the geometric Fourier transform“, \emph{Proc.\ SPIE} \textbf{10694}, 106940Q (2018), doi:10.1117/12.2315147.
+
+\bibitem{bornwolf1999} M.~Born, E.~Wolf, \emph{Principles of Optics}, 7.~Aufl., Cambridge University Press (1999).
+
+\bibitem{feynman1965} R.\,P.~Feynman, A.\,R.~Hibbs, \emph{Quantum Mechanics and Path Integrals}, McGraw-Hill, New York (1965).
+
+\bibitem{gloge1969} D.~Gloge, D.~Marcuse, „Formal quantum theory of light rays“, \emph{J.\ Opt.\ Soc.\ Am.}\ \textbf{59}, 1629 (1969), doi:10.1364/JOSA.59.001629.
+
+\bibitem{keller1962} J.\,B.~Keller, „Geometrical theory of diffraction“, \emph{J.\ Opt.\ Soc.\ Am.}\ \textbf{52}, 116--130 (1962), doi:10.1364/JOSA.52.000116.
+
+\bibitem{kravtsov1993} Yu.\,A.~Kravtsov, Yu.\,I.~Orlov, \emph{Caustics, Catastrophes and Wave Fields}, Springer Series on Wave Phenomena \textbf{15}, Springer, Berlin (1993).
+
+\bibitem{leutenegger2006} M.~Leutenegger, R.~Rao, R.\,A.~Leitgeb, T.~Lasser, „Fast focus field calculations“, \emph{Opt.\ Express} \textbf{14}, 11277--11291 (2006), doi:10.1364/OE.14.011277.
+
+\bibitem{littlejohn1986} R.\,G.~Littlejohn, „The semiclassical evolution of wave packets“, \emph{Phys.\ Rep.}\ \textbf{138}, 193--291 (1986), doi:10.1016/0370-1573(86)90103-1.
+
+\bibitem{maslov1965} V.\,P.~Maslov, \emph{Theory of Perturbations and Asymptotic Methods} (russ.), Izd.\ MGU, Moskau (1965).
+
+\bibitem{maslov1981} V.\,P.~Maslov, M.\,V.~Fedoriuk, \emph{Semi-Classical Approximation in Quantum Mechanics}, Reidel, Dordrecht (1981).
+
+\bibitem{miyamoto1962a} K.~Miyamoto, E.~Wolf, „Generalization of the Maggi-Rubinowicz theory of the boundary diffraction wave -- Part~I“, \emph{J.\ Opt.\ Soc.\ Am.}\ \textbf{52}, 615--625 (1962).
+
+\bibitem{miyamoto1962b} K.~Miyamoto, E.~Wolf, „Generalization of the Maggi-Rubinowicz theory of the boundary diffraction wave -- Part~II“, \emph{J.\ Opt.\ Soc.\ Am.}\ \textbf{52}, 626--636 (1962), doi:10.1364/JOSA.52.000626.
+
+\bibitem{morette1951} C.~Morette, „On the definition and approximation of Feynman's path integrals“, \emph{Phys.\ Rev.}\ \textbf{81}, 848--852 (1951), doi:10.1103/PhysRev.81.848.
+
+\bibitem{richards1959} B.~Richards, E.~Wolf, „Electromagnetic diffraction in optical systems II. Structure of the image field in an aplanatic system“, \emph{Proc.\ R.\ Soc.\ Lond.\ A} \textbf{253}, 358--379 (1959), doi:10.1098/rspa.1959.0200.
+
+\bibitem{rubinowicz1917} A.~Rubinowicz, „Die Beugungswelle in der Kirchhoffschen Theorie der Beugungserscheinungen“, \emph{Ann.\ Phys.}\ \textbf{358}(12), 257--278 (1917), doi:10.1002/andp.19173581202.
+
+\bibitem{stamnes1986} J.\,J.~Stamnes, \emph{Waves in Focal Regions}, Adam Hilger, Bristol (1986).
+
+\bibitem{vankampen1949} N.\,G.~van Kampen, „An asymptotic treatment of diffraction problems“, \emph{Physica} \textbf{14}, 575--589 (1949).
+
+\bibitem{vanvleck1928} J.\,H.~Van Vleck, „The correspondence principle in the statistical interpretation of quantum mechanics“, \emph{Proc.\ Natl.\ Acad.\ Sci.\ USA} \textbf{14}, 178--188 (1928), doi:10.1073/pnas.14.2.178.
+
+\bibitem{vonpfeil2000} A.~v.~Pfeil, F.~Wyrowski, A.~Drauschke, H.~Aagedal, „Analysis of optical elements with the local plane-interface approximation“, \emph{Appl.\ Opt.}\ \textbf{39}, 3304 (2000), doi:10.1364/AO.39.003304.
+
+\bibitem{wang2018} Z.~Wang, S.~Zhang, O.~Baladron-Zorita, F.~Wyrowski, „Semi-analytical Fourier transform and its application to physical-optics modelling“, \emph{Proc.\ SPIE} \textbf{10694}, 106940O (2018), doi:10.1117/12.2315776.
+
+\bibitem{wang2019} Z.~Wang, S.~Zhang, O.~Baladron-Zorita, C.~Hellmann, F.~Wyrowski, „Application of the semi-analytical Fourier transform to electromagnetic modeling“, \emph{Opt.\ Express} \textbf{27}, 15335--15350 (2019), doi:10.1364/OE.27.015335.
+
+\bibitem{wang2020} Z.~Wang, O.~Baladron-Zorita, C.~Hellmann, F.~Wyrowski, „Theory and algorithm of the homeomorphic Fourier transform for optical simulations“, \emph{Opt.\ Express} \textbf{28}, 10552--10571 (2020), doi:10.1364/OE.388022.
+
+\bibitem{wolf1959} E.~Wolf, „Electromagnetic diffraction in optical systems I. An integral representation of the image field“, \emph{Proc.\ R.\ Soc.\ Lond.\ A} \textbf{253}, 349--357 (1959).
+
+\bibitem{wolfli1981} E.~Wolf, Y.~Li, „Conditions for the validity of the Debye integral representation of focused fields“, \emph{Opt.\ Commun.}\ \textbf{39}, 205--210 (1981), doi:10.1016/0030-4018(81)90107-3.
+
+\bibitem{wyrowski2011} F.~Wyrowski, M.~Kuhn, „Introduction to field tracing“, \emph{J.\ Mod.\ Opt.}\ \textbf{58}, 449--466 (2011).
+
+\bibitem{wyrowski2017gft} F.~Wyrowski, C.~Hellmann, „The geometric Fourier transform“, \emph{DGaO-Proceedings} 118.~Jahrestagung, A37 (2017).
+
+\end{thebibliography}
+
+\end{document}
