@@ -25,6 +25,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 - `selection.fit_curvature_radial`, `selection.fit_curvature` (Minimax als lineares Programm) und
   `selection.sft_samples`; reproduziert die Werte aus Abschnitt 7.5 des Papers (#3).
 
+- `pft.inverse_pft_1d/2d`, `pft.pft_1d_branches` (mehrere stationäre Punkte) und
+  `AsymptoticWarning` bei kleiner lokaler Fresnel-Zahl (#4).
+
 ### Geändert
 
 - Entscheidungen E1–E5 und ADR 0001–0003 angenommen (`docs/roadmap.md`).

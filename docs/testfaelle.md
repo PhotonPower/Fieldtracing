@@ -121,3 +121,15 @@ Programm (exakt, keine Iteration):
 Die 2D-Anpassung (Matrix C, maximale kartesische Komponente des Restgradienten, weil sie auf
 einem achsparallelen Gitter die Nyquist-Schrittweite bestimmt) liefert auf der Kreisscheibe
 C = −521,04·I. Rein quadratische Phasen werden exakt angepasst.
+
+## Inverse PFT und mehrere Zweige (Issue #4)
+
+- **Hin- und Rück-PFT** (sphärische Phase in 2D, vektorielle Amplitude; 1D mit veränderlicher
+  Krümmung): exakt bis auf Rundung. Mit ∇ψ̃ = −ρ_s und H̃ = −H⁻¹ ist das eine algebraische
+  Identität.
+- **Inverse PFT gegen Quadratur** (Ẽ = Gauß in k mal exp(i b k²/2), s = 400 mm⁻¹): Fehler
+  3,1·10⁻³ bei F = |b|·s² = 320 und 7,8·10⁻⁴ bei F = 1280, also O(1/F).
+- **Zwei stationäre Punkte** (ψ = a x³/3, a = 2000 mm⁻³, Gauß-Amplitude): Summe beider Zweige
+  gegen direkte Quadratur 5,3·10⁻³ bis 3,8·10⁻⁴ (relativ zum Maximum), abnehmend mit wachsendem
+  Abstand vom Faltpunkt k = 0. Ein einzelner Zweig liegt um 170 % daneben.
+- **Gültigkeitswarnung** `AsymptoticWarning`, wenn |h|·L_U² unter die Schwelle fällt (Standard 10).
