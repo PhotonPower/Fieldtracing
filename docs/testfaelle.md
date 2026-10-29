@@ -11,7 +11,7 @@ Gemessene Werte stammen aus den Tests bzw. aus `experiments/pruefrechnungen_1d.p
 | T4 | Debye gegen Rayleigh-Sommerfeld, N_F von 3 bis 10³ | exaktes RS-Integral auf der Achse (radiale Quadratur) | Abweichung fällt wie 1/N_F, Fokusverschiebung zur Linse, im Debye-Integral null | ✅ auf der Achse | `test_debye.py` |
 | T5 | gleichmäßige Kantenformel | direkte Quadratur | relativer Fehler < 1 % für \|x_s − x_e\| ≤ 0,05 mm; Schattengrenze ½; Übergang in die Kantenwelle auf 0,5 % | ✅ 1D | `test_edge.py` |
 | T6 | SFT | direkte Quadratur (1D); geschlossene Formen (2D: Gauß × Chirp, gedrehtes Rechteck über Fresnel-Integrale) | siehe Tabellen unten | ✅ 1D und 2D, allgemeines C | `test_sft.py`, `test_sft_2d.py` |
-| T7 | Maslov-Index | Winkelspektrum | Brennlinie (1D): μ = 1, Phase −π/2; Punktfokus (2D): μ = 2 | ◐ 1D | `test_semiclassical.py` |
+| T7 | Maslov-Index | Winkelspektrum | Brennlinie (1D): μ = 1, Phase −π/2; Punktfokus (2D): μ = 2; astigmatisch: μ = 1 zwischen, μ = 2 hinter den Brennlinien | ✅ 1D und 2D | `test_semiclassical.py`, `test_maslov_2d.py` |
 | T8 | Fresnel-Operator | analytisch | R + T = 1, r_p = −r_s bei 0°, r_p = 0 bei Brewster, Transversalität, Snellius | ✅ | `test_lpia.py` |
 | B | Beispiel Kapitel 7.5 | verkleinertes System gegen RS; Kennzahlen | Kennzahlen wie im Paper | ◐ Kennzahlen, Minimax-Krümmung | `test_selection.py`, `test_curvature_fit.py` |
 
@@ -133,3 +133,21 @@ C = −521,04·I. Rein quadratische Phasen werden exakt angepasst.
   gegen direkte Quadratur 5,3·10⁻³ bis 3,8·10⁻⁴ (relativ zum Maximum), abnehmend mit wachsendem
   Abstand vom Faltpunkt k = 0. Ein einzelner Zweig liegt um 170 % daneben.
 - **Gültigkeitswarnung** `AsymptoticWarning`, wenn |h|·L_U² unter die Schwelle fällt (Standard 10).
+
+## Maslov-Index in 2D (Issue #7)
+
+Super-Gauß-Amplitude (Breite 1 mm, Ordnung 4), Phase ψ = −k(√(f_x² + x²) − f_x) − k(√(f_y² + y²) − f_y),
+Fenster 4 mm; Vergleich mit dem 2D-Winkelspektrum an vier Proben (maximaler Fehler, Amplituden ≈ 1):
+
+| f_x, f_y (mm) | d (mm) | μ | λ = 0,5 µm | λ = 0,25 µm |
+| --- | --- | --- | --- | --- |
+| 20, 20 (Punktfokus) | 40 | 2 | 3,9·10⁻³ | 1,9·10⁻³ |
+| 20, 40 (zwischen den Brennlinien) | 30 | 1 | 2,0·10⁻² | 1,0·10⁻² |
+| 20, 40 (hinter beiden) | 60 | 2 | 9,4·10⁻³ | 4,7·10⁻³ |
+
+Ordnung O(1/k) (Verhältnis ≈ 2 bei doppelter Wellenzahl; λ = 0,25 µm als `slow`). Ohne den
+Faktor exp(−iπμ/2) läge die Vorhersage um mehr als die halbe Amplitude daneben.
+
+Wichtig für die Wahl der Testfälle: Die geometrische Näherung braucht eine große Fresnel-Zahl
+des defokussierten Strahls, a²·δ/(λ f²) mit dem Abstand δ von der jeweiligen Brennlinie. Bei
+einer ersten Wahl (a = 0,4 mm, δ = 10 mm, f = 50 mm) war sie ≈ 1, und die Fehler lagen bei 30 %.

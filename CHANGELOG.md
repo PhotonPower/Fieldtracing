@@ -28,6 +28,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 - `pft.inverse_pft_1d/2d`, `pft.pft_1d_branches` (mehrere stationäre Punkte) und
   `AsymptoticWarning` bei kleiner lokaler Fresnel-Zahl (#4).
 
+- Tests für den Maslov-Index in 2D (Punktfokus, astigmatische Brennlinien) gegen das
+  Winkelspektrum, mit Konvergenz O(1/k) als `slow` (#7).
+
 ### Geändert
 
 - Entscheidungen E1–E5 und ADR 0001–0003 angenommen (`docs/roadmap.md`).
