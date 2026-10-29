@@ -122,6 +122,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   Abweichung bei hoher NA ist die verletzte Sinusbedingung der kollinearen idealen Linse;
   Issue-Entwurf für Raytatouille überarbeitet (#60).
 
+- `experiments/run_beispiel_7_5.sh`: Installation und volle Rechnung der Zwischenebene von
+  Beispiel 7.5 auf einem Rechner mit genug Speicher, mit Log (#41).
+
 ### Geändert
 
 - Paper, Abschnitt 7.5 (#43): periodische Kopien der Fokus-FFT (N ≈ 80 statt 40 für 10⁻³),
