@@ -50,8 +50,13 @@ Convention A nach Byrnes (arXiv:1603.02720v5, Gl. (6)), wie Raytatouille:
   Gl. fresnel_operator).
 
 Raytatouille trägt je Strahl eine **leistungsnormierte** 3×3-Matrix P und ein Gewicht
-(weight = Leistung für eine unpolarisierte Quelle, ADR 0021 dort). Die Umrechnung in
-Feldamplituden wird in F4 festgelegt; bis dahin rechnet dieses Paket mit Feldamplituden.
+(weight = Leistung für eine unpolarisierte Quelle, ADR 0021 dort). Dieses Paket rechnet mit
+Feldamplituden; die Umrechnung legt ADR 0004 fest (`rtt_bridge.field_operator`):
+
+U_aus = √(s·n_ein cos γ_ein dA_ein/(n_aus cos γ_aus dA_aus))·e^(−iπμ/2)·P_T·U_ein,
+P_T = (I − k kᵀ)P, s = weight/(½‖P_T‖²_F).
+
+Brechzahlen sind dabei absolut wie in Raytatouille (`AIR` = Ciddor-Luft, n ≈ 1,00027).
 
 ## Code
 

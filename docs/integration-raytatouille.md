@@ -86,8 +86,8 @@ aus dem kompilierten System übernimmt.
 
 ## Offene Fragen für den Port
 
-1. Exakte Umrechnung von weight und leistungsnormierter P in Feldamplituden auf einer Ebene,
-   einschließlich cos-Faktoren (Paper, Gl. interface_amplitude). Wird in F4 mit Tests festgelegt.
+1. ~~Exakte Umrechnung von weight und leistungsnormierter P in Feldamplituden auf einer Ebene~~:
+   festgelegt und getestet in ADR 0004 (#23); Raytatouille braucht dafür keine Änderung.
 2. Nachbarschaft der Strahlen: reicht die Zellstruktur von `GridPupil`/`PointListPupil`, oder
    braucht es eine Triangulierung (Randzellen, Obskurationen)?
 3. Bezugsebenen: Wie verhalten sich die PSF-Ebene von ADR 0032 (senkrecht zum Hauptstrahl) und die

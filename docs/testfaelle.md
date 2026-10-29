@@ -352,3 +352,15 @@ kompilierten Systems: Landepunkt < 10⁻¹⁰ mm, Richtung < 10⁻¹², OPL ab d
 Gewicht auf der Achse = T₁·T₂ aus den Fresnel-Koeffizienten (Convention A), relativ < 10⁻¹².
 Beim ersten Versuch mit Luft = 1 wich die OPL um 0,028 mm ab: Raytatouille rechnet mit
 Ciddor-Luft (n = 1,000272 bei 0,5876 µm).
+
+## PRT-Matrix und Gewicht → Feldamplitude (Issue #23, ADR 0004)
+
+- **Synthetisch** (ohne Raytatouille): P = √c·T + k kᵀ₀ aus `lpia.fresnel_operator` bei 0°, 20°,
+  Brewster und 70°; `field_operator` gibt T bzw. T₂T₁ zurück (< 10⁻¹⁴), mit 30 % Absorption
+  √0,7·T₂T₁, mit |J| = 4 und μ = 2 den Faktor −½.
+- **Raytatouille** (Marker `rtt`, Fresnel-Platte n = 1,5168 im Vakuum aus `m3/fresnel_bk7`,
+  Felder 0°, 20°, 56,6° (Brewster), 70°): P nach der ersten Fläche = √c·T + k kᵀ₀ auf 10⁻¹³;
+  Feldoperator hinter der Platte = T₂T₁ auf 10⁻¹³; `polar.transmission` für s und p =
+  |T₂T₁ E|² relativ < 10⁻¹², bei Brewster p-Transmission 1.
+- **Volumenabsorption** (`m3/absorbing_ar_plate`, κ = 10⁻⁶, 10 mm, AR-Schichten): s auf der Achse
+  = exp(−4πκt/λ) relativ < 10⁻¹²; |M E|² = `polar.transmission` auch für einen gekippten Strahl.
