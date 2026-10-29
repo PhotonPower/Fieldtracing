@@ -11,7 +11,7 @@
 | `pft` | punktweise Fourier-Transformation, invers, Summe über mehrere stationäre Punkte (1D), Gültigkeitswarnung | Abschnitt 4, Gl. pft_final |
 | `sft` | semi-analytische Fourier-Transformation (1D, 2D für allgemeines C, invers), Abtastprüfung, Blendengewichte für beliebige Gebiete | Abschnitt 6.4, Gl. sft_formula |
 | `edge` | Kantenwelle, gleichmäßige erfc-Lösung; 2D: Randintegral, kritische Punkte 2. und 3. Art (Polygon, Kreis) | Abschnitt 6.1–6.2, Gl. keller_gtd, fresnel_edge, bdw |
-| `focus` | sphärische Austrittsphase, exakte Legendre-Transformation, Airy-Integral, Debye-Fokus per FFT (`debye_focus`, skalar und vektoriell) | Abschnitt 5.3, Gl. debye |
+| `focus` | sphärische Austrittsphase, exakte Legendre-Transformation, Airy-Integral, Debye-Fokus per FFT (`debye_focus`, skalar und vektoriell), Richards-Wolf-Referenz (`richards_wolf`) | Abschnitt 5.3, Gl. debye |
 | `lpia` | vektorielles Snellius-Gesetz, Fresnel-Koeffizienten, Operator T; Schritt durch gekrümmte Flächen mit Maschen-Jacobi (`trace_surface`, `mesh_jacobian`, `interface_amplitude`); vektorisierte Varianten `*_batch` mit Totalreflexionsmaske | Abschnitt 3.2, 3.5 |
 | `selection` | Kennzahlen w, F, Kantenverhältnis, Aufwand, Minimax-Krümmung für die SFT; Auswahlregeln (`Situation`, `select_method`) und Fehlerterme (Debye, Kante auf Gitter) | Kapitel 7, Tabellen tab:selection, tab:errors |
 | `mesh` | Jacobi-Faktor aus unstrukturierten Strahlwolken: Delaunay-Triangulierung ohne Dreiecke über Obskurationen, Flächenverhältnis je Dreieck, Ableitungen per quadratischer Ausgleichsrechnung, Maslov-Index, Kaustik-Erkennung | Abschnitt 3.4, Gl. jacobian_amplitude, Erkenntnis „Nachbarschafts-Maschen“ |

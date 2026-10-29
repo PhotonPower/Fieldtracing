@@ -92,6 +92,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   relativer Fehler ≈ 4·10⁻⁴); sphärische Wellen waren nicht betroffen. Gefunden beim Vergleich mit
   der Maschen-Jacobi-Matrix in #19, Regressionstest mit zentralen Differenzen.
 
+- `GridlessField.aplanatic` (Austrittsfeld einer aplanatischen Linse, vektoriell, Sinusbedingung)
+  und `focus.richards_wolf` (Referenz nach Richards und Wolf, mit Defokus) (#39).
+
 ### Geändert
 
 - `chain.debye` nimmt am Rand der k-Scheibe den nächsten Strahlwert statt 0; der Rand der

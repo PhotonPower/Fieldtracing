@@ -403,3 +403,14 @@ Bericht mit Bild: `docs/vergleich-psf.md`.
 - **Konvergenz von `chain.debye`** mit `residual_at(..., outside="nearest")`: Strehl 0,7371,
   0,7380, 0,7382 bei n = 64, 128, 256; vorher mit Null außerhalb der Wolke 0,748 … 0,739, erste
   Ordnung.
+
+## Aplanatische Linse und Richards-Wolf (Issue #39)
+
+- `focus.richards_wolf` auf der Achse gegen die geschlossene Form von I₀ (NA 0,3 und 0,9):
+  relativ < 10⁻¹², E_y = E_z = 0.
+- `GridlessField.aplanatic`: Leistung durch die Austrittsebene = π(f·NA)² (Pupille), relativ
+  < 10⁻⁶ (NA 0,9); Feld transversal (< 10⁻¹⁴); radiale Eingangspolarisation bleibt meridional,
+  azimutale bleibt azimutal.
+- Debye aus der Wolke (120 Ringe, `chain.debye`, n = 256) gegen `richards_wolf`: 1,3·10⁻⁵
+  (NA 0,5) und 3,3·10⁻⁵ (NA 0,9) relativ zum Maximum; bei 1,2 λ Defokus 1,8·10⁻⁴, weil
+  `chain.debye` die Referenzkugel auf die Zielebene legt, Richards-Wolf auf den Fokus.
