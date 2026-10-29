@@ -189,15 +189,30 @@ class GridlessField:
         )
 
     def residual_at(
-        self, query: FloatArray, method: Literal["linear", "cubic"] = "linear"
+        self,
+        query: FloatArray,
+        method: Literal["linear", "cubic"] = "linear",
+        outside: Literal["zero", "nearest"] = "zero",
     ) -> ComplexArray:
-        """Residual U at arbitrary points (scattered interpolation; zero outside the hull)."""
+        """Residual U at arbitrary points (scattered interpolation).
+
+        Outside the convex hull of the samples U is zero, or with outside="nearest" the value
+        of the nearest sample (for integrals whose boundary is applied separately, e.g. the
+        k-disc of the Debye integral).
+        """
         q = np.asarray(query, dtype=np.float64)
         interp_cls = LinearNDInterpolator if method == "linear" else CloughTocher2DInterpolator
         out = np.empty((len(q), 3), dtype=np.complex128)
         for c in range(3):
-            interp = interp_cls(self.points, self.amplitude[:, c], fill_value=0.0)
+            interp = interp_cls(self.points, self.amplitude[:, c], fill_value=np.nan)
             out[:, c] = interp(q)
+        missing = np.any(np.isnan(out), axis=1)
+        if np.any(missing):
+            if outside == "nearest":
+                _, idx = cKDTree(self.points).query(q[missing])
+                out[missing] = self.amplitude[idx]
+            else:
+                out[missing] = 0.0
         return out
 
     def to_grid(
