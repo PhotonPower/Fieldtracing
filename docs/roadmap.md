@@ -56,15 +56,29 @@ Vorgeschlagene Issues, je ein Auftrag für einen Agenten. Sie werden erst nach F
 | F1-6 | `lpia.py` | LPIA-Schritt an einer Sphäre mit Strahlnetz, Energiebilanz nach Gl. interface_amplitude | Ebene Welle durch eine Planfläche = Fresnel; Fluss bleibt mit R + T = 1 erhalten |
 | F1-7 | `semiclassical.py` | Maslov-Index am Punktfokus (μ = 2) und an Brennlinien in 2D | 2D-Winkelspektrum: Phasensprung −π bzw. −π/2 |
 
-## Entscheidungen, die noch offen sind
+## Entscheidungen
 
-| Nr. | Frage | Vorschlag |
+Alle angenommen vom Maintainer am 2026-10-29.
+
+| Nr. | Frage | Entscheidung |
 | --- | --- | --- |
-| E1 | Bleibt dieses Repository reines Python, oder entstehen C++-Kerne schon hier? | reines Python (ADR 0001); C++ nur in Raytatouille |
+| E1 | Bleibt dieses Repository reines Python, oder entstehen C++-Kerne schon hier? | reines Python (NumPy, SciPy); C++ nur in Raytatouille (ADR 0001) |
 | E2 | Format der Sollwertdateien für den Port | JSON im Ergebnisformat `raytatouille-result` (ADR 0023 von Raytatouille) |
-| E3 | Ort in Raytatouille | neue Bibliothek `rtt-field` in der Schicht Auswertung (Begründung in `docs/integration-raytatouille.md`) |
-| E4 | Erster Integrationspunkt in Raytatouille | Vektor-Debye-PSF aus der Jones-Pupille (schließt die in ADR 0033 ausgelassene Vektor-PSF und die √cos-Faktoren) |
-| E5 | GitHub-Issues für F1 anlegen | nach Freigabe dieses Plans |
+| E3 | Ort in Raytatouille | neue Bibliothek `rtt-field` in der Schicht Auswertung, oberhalb von `rtt-analysis`; die Reihenfolge legt dort ein ADR fest (Begründung in `docs/integration-raytatouille.md`) |
+| E4 | Erster Integrationspunkt in Raytatouille | Vektor-Debye-PSF aus der Jones-Pupille (schließt die in ADR 0033 ausgelassene Vektor-PSF und die √cos-Faktoren); danach Felder in beliebigen Ebenen mit SFT |
+| E5 | GitHub-Issues für F1 | werden angelegt, sobald ein auf dieses Repository beschränktes Token vorliegt; Reihenfolge siehe unten |
+
+Weitere Festlegungen vom selben Tag:
+
+- ADR 0001–0003 sind angenommen.
+- Teure Referenzrechnungen bekommen den pytest-Marker `slow`; die Standard-CI überspringt sie, ein
+  eigener Workflow führt sie nachts und manuell aus. Eingeführt mit F1-1.
+
+### Reihenfolge der F1-Issues
+
+1. F1-4 (Debye-Fokus), weil der erste Integrationspunkt (E4) darauf aufbaut; parallel dazu
+   F1-1 und F1-2 (allgemeine SFT, Minimax-Krümmung), weil davon die SFT bei hoher NA abhängt.
+2. Danach F1-3, F1-5, F1-6 und F1-7.
 
 ## Risiken
 

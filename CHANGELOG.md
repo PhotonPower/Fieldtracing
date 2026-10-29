@@ -13,3 +13,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   SFT (1D, 2D diagonal), Kantenformeln, Fokuskette mit sphärischer Phase, Fresnel-Operator
   (Convention A), Kennzahlen und Auswahlregeln aus Kapitel 7.
 - Paper `docs/paper/fieldtracing.tex`.
+
+### Geändert
+
+- Entscheidungen E1–E5 und ADR 0001–0003 angenommen (`docs/roadmap.md`).
