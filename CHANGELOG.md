@@ -110,6 +110,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   ADR 0023, Typ-Vorschlag `FieldReference`), `tools/reference_cases.py`,
   `tools/export_reference.py`, 12 Dateien unter `reference/field/`, Aktualitätstest.
 
+- ADR-Entwurf für Raytatouille: Bibliothek `rtt-field` (`docs/rtt-port/adr-entwurf-rtt-field.md`,
+  #51).
+
 ### Geändert
 
 - Paper, Abschnitt 7.5 (#43): periodische Kopien der Fokus-FFT (N ≈ 80 statt 40 für 10⁻³),
