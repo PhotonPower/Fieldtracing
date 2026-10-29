@@ -35,6 +35,10 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   `edge.polygon_asymptotics` und `edge.circle_asymptotics` über kritische Punkte 2. und 3. Art
   (#5).
 
+- `lpia.trace_surface`, `lpia.mesh_jacobian` und `lpia.interface_amplitude`: LPIA-Schritt durch
+  gekrümmte Flächen mit Jacobi-Faktor aus dem Strahlnetz (#6). Damit ist Meilenstein F1
+  abgeschlossen.
+
 ### Geändert
 
 - Paper: Gültigkeitsgrenze der Debye-Näherung quantifiziert (≈ 1,5/N_F statt N_F ≲ 10),
