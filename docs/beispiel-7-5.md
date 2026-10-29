@@ -83,21 +83,28 @@ Kantenwelle, #31); innen liegen die Fehler wie beim System mit kleiner NA darüb
 | direkte FFT je Richtung | 6·10⁴ (Nyquist, L = 30 mm) | 2·10⁵ (q Punkte je Fresnel-Breite, doppeltes Nyquist, doppeltes Fenster) |
 | Speicher eines (n, n, 3)-Feldes | – | 1,31 GB |
 
-**Rechnung.** Die volle Kette braucht etwa 5–6 GB Hauptspeicher (mehrere Felder der Größe
-(n, n, 3) gleichzeitig) und lief in dieser Umgebung (4 GB) nicht. Gerechnet ist das System mit
-gleicher NA, gleichem q und kleinerer Blende; die Punktzahl folgt n ∝ √a (Schritt ∝ w_c ∝ √f,
-Fenster ∝ a). Abseits der kantennahen Zone (d_e ≥ 40 w, Kantenverhältnis ≤ 1 %) und der Achszone
-wird die Intensität mit der geometrischen Propagation (Gl. jacobian_amplitude) verglichen
-(`experiments/beispiel_7_5_zwischenebene.py`, Test `slow` für a = 2,5 mm):
+**Rechnung.** Die volle Kette hält mehrere Felder der Größe (n, n, 3) gleichzeitig und lief in der
+Entwicklungsumgebung (4 GB) nicht. Dort gerechnet ist das System mit gleicher NA, gleichem q und
+kleinerer Blende; die Punktzahl folgt n ∝ √a (Schritt ∝ w_c ∝ √f, Fenster ∝ a). Die volle
+Rechnung lief am 2026-10-30 auf dem Rechner des Maintainers (AMD EPYC 9015, AlmaLinux 10,
+Python 3.13.5, numpy 2.2.6, scipy 1.15.3, Fieldtracing-Commit `990a927`) mit
+`experiments/run_beispiel_7_5.sh`. Abseits der kantennahen Zone (d_e ≥ 40 w, Kantenverhältnis
+≤ 1 %) und der Achszone wird die Intensität mit der geometrischen Propagation
+(Gl. jacobian_amplitude) verglichen (`experiments/beispiel_7_5_zwischenebene.py`, Test `slow`
+für a = 2,5 mm):
 
-| a | n | Laufzeit (ein Kern) | Spitzenspeicher | Intensität gegen Geometrie |
-| --- | --- | --- | --- | --- |
-| 1,25 mm | 1656 | 8,4 s | 0,66 GB | 1,9·10⁻³ |
-| 2,5 mm | 2342 | 19,5 s | 1,15 GB | 1,5·10⁻³ |
-| 5 mm | 3312 | 34 s | 2,2 GB | 3,0·10⁻³ |
-| 12,5 mm (hochgerechnet) | 5234 | ≈ 90 s | ≈ 5–6 GB | – |
+| a | n | Laufzeit, Entwicklung (Xeon, 1 Kern) | Laufzeit, EPYC 9015 | Spitzenspeicher | Intensität gegen Geometrie |
+| --- | --- | --- | --- | --- | --- |
+| 1,25 mm | 1656 | 8,4 s | 27,7 s | 0,66 GB | 1,9·10⁻³ |
+| 2,5 mm | 2342 | 19,5 s | 65,4 s | 1,15 GB | 1,5·10⁻³ |
+| 5 mm | 3312 | 34 s | 110 s | 2,20 GB | 3,0·10⁻³ |
+| **12,5 mm (volles System)** | **5234** | – | **333 s** | **5,28 GB** | **4,6·10⁻³** |
 
-Laufzeit und Speicher wachsen wie n², also wie a. Die Abweichung von der Geometrie bleibt unter
-der Kantenwelligkeit (≤ 1 % bei 40 w). Die volle Rechnung wäre mit komponentenweiser Verarbeitung
-(je Feldkomponente eine SFT) mit etwa einem Drittel des Speichers möglich; das ist eine
-Optimierung für den Port, kein Genauigkeitsthema.
+Laufzeit und Speicher wachsen wie n², also wie a; die Hochrechnung (5–6 GB) traf zu. Die Laufzeit
+war auf dem EPYC-Rechner bei allen Radien etwa 3,3-mal länger als in der Entwicklungsumgebung;
+die Rechnung ist einkernig (NumPy-FFT), die Ursache des Unterschieds ist nicht untersucht.
+Hochgerechnet aus der Entwicklungsumgebung wären es etwa 100 s gewesen. Die Abweichung von
+der Geometrie bleibt auch beim vollen System unter der Kantenwelligkeit (≤ 1 % bei 40 w); die
+Minimax-Krümmung der vollen Rechnung ist −521,3 mm⁻² (Paper −521). Mit komponentenweiser
+Verarbeitung (je Feldkomponente eine SFT) ginge es mit etwa einem Drittel des Speichers; das ist
+eine Optimierung für den Port, kein Genauigkeitsthema.

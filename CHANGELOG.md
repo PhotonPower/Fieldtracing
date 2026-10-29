@@ -127,6 +127,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 
 ### Geändert
 
+- Beispiel 7.5: volle Rechnung der Zwischenebene nachgetragen (5,28 GB, 333 s, Intensität gegen
+  Geometrie 4,6·10⁻³) in `docs/beispiel-7-5.md`, Paper Abschnitt 7.5 und Roadmap (#41).
+
 - Paper, Abschnitt 7.5 (#43): periodische Kopien der Fokus-FFT (N ≈ 80 statt 40 für 10⁻³),
   nachgerechnete Punktzahlen und Speicher der Zwischenebene, Fehlerbudget mit Messwerten,
   Fresnel-Zahl des verkleinerten Systems (≈ 1440 statt 144) und Ergebnisse des Integrationstests.
