@@ -12,7 +12,7 @@
 | `sft` | semi-analytische Fourier-Transformation (1D, 2D für allgemeines C, invers), Abtastprüfung, Blendengewichte für beliebige Gebiete | Abschnitt 6.4, Gl. sft_formula |
 | `edge` | Kantenwelle, gleichmäßige erfc-Lösung; 2D: Randintegral, kritische Punkte 2. und 3. Art (Polygon, Kreis) | Abschnitt 6.1–6.2, Gl. keller_gtd, fresnel_edge, bdw |
 | `focus` | sphärische Austrittsphase, exakte Legendre-Transformation, Airy-Integral, Debye-Fokus per FFT (`debye_focus`, skalar und vektoriell) | Abschnitt 5.3, Gl. debye |
-| `lpia` | vektorielles Snellius-Gesetz, Fresnel-Koeffizienten, Operator T | Abschnitt 3.2 |
+| `lpia` | vektorielles Snellius-Gesetz, Fresnel-Koeffizienten, Operator T; Schritt durch gekrümmte Flächen mit Maschen-Jacobi (`trace_surface`, `mesh_jacobian`, `interface_amplitude`) | Abschnitt 3.2, 3.5 |
 | `selection` | Kennzahlen w, F, Kantenverhältnis, Aufwand, Minimax-Krümmung für die SFT | Kapitel 7 |
 | `field` | Datenstrukturen der hybriden Darstellung | Abschnitt 1.3, 7.2 |
 

@@ -180,3 +180,19 @@ Produkt zweier Fresnel-Integrale:
 Im beleuchteten Bereich ist die PFT allein über 10-mal schlechter als mit Kanten und Ecken. Nahe
 einer Schattengrenze versagt die Randdarstellung (|∇Φ| → 0 am Rand); dort braucht es die
 gleichmäßige Lösung, in 2D noch offen.
+
+## LPIA an gekrümmten Flächen mit Strahlnetz (Issue #6)
+
+n₁ = 1, n₂ = 1,5, λ = 0,5 µm. Amplitude nach Gl. (interface_amplitude) mit Jacobi-Matrix aus den
+Nachbarstrahlen (Differenzen zweiter Ordnung, auch am Rand).
+
+- **Gekippte ebene Welle durch eine Planfläche:** U₂ = T·U₁ exakt (< 10⁻¹²), J = 1, Ausgangsfeld
+  transversal.
+- **Konvergente Welle durch eine Sphäre um ihren Fokus** (alle Strahlen senkrecht):
+  |E₂| = |t|·|E₁|·r₁/r₂ und Phase = k₀ × optischer Weg, beides bis auf Rundung (< 10⁻¹²). Prüft
+  Schnittpunkt, Normale, cos-Faktoren und Maschen-Jacobi zusammen.
+- **Divergente Welle an einer Planfläche:** Maschen-Jacobi gegen die analytische Jacobi-Funktion
+  J = (ρ₂/ρ₁)·dρ₂/dρ₁: Fehler 1,3·10⁻⁵ (41² Strahlen) bzw. 3,1·10⁻⁶ (81²), zweite Ordnung.
+- **Ebene Welle durch eine Sphäre, auf der Achse:** U₂ = t·e^(−iπμ/2)/|1 − d/f′| mit
+  f′ = n₂R/(n₂ − n₁) = 60 mm für d = 10 … 50 mm (μ = 0) und d = 90 mm hinter dem Fokus (μ = 2,
+  Gouy-Phase −π): Fehler < 10⁻⁵.
