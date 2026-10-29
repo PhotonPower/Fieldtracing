@@ -8,7 +8,7 @@ Gemessene Werte stammen aus den Tests bzw. aus `experiments/pruefrechnungen_1d.p
 | T1 | Van-Vleck-Kern gegen Rayleigh-Sommerfeld | analytisch: K_RS/K_VV = 1 + i/(kr) | relative Abweichung = 1/(kr) | ✅ | `test_propagation.py` |
 | T2 | Jacobi-Gesetz | Winkelspektrum (exakt) | 1D: Fehler < 2·10⁻², Ordnung O(1/k) (Verhältnis 3–5 bei k × 4); 2D: \|U\| auf 0,3 % | ✅ 1D und 2D | `test_semiclassical.py` |
 | T3 | exakte Phasenkompensation | analytisch | Rest < 10⁻⁶ rad; parabolisch + exaktes k_z: −2819,45 rad | ✅ | `test_focus.py` |
-| T4 | Debye gegen Rayleigh-Sommerfeld, N_F von 3 bis 10³ | direkte 2D-Integration | Abweichung wächst mit fallendem N_F, Fokusverschiebung bei N_F ≲ 10 | ○ F1-4 | – |
+| T4 | Debye gegen Rayleigh-Sommerfeld, N_F von 3 bis 10³ | exaktes RS-Integral auf der Achse (radiale Quadratur) | Abweichung fällt wie 1/N_F, Fokusverschiebung zur Linse, im Debye-Integral null | ✅ auf der Achse | `test_debye.py` |
 | T5 | gleichmäßige Kantenformel | direkte Quadratur | relativer Fehler < 1 % für \|x_s − x_e\| ≤ 0,05 mm; Schattengrenze ½; Übergang in die Kantenwelle auf 0,5 % | ✅ 1D | `test_edge.py` |
 | T6 | SFT | direkte Quadratur (4·10⁶ Punkte) | siehe Tabelle unten | ✅ 1D, 2D diagonal | `test_sft.py` |
 | T7 | Maslov-Index | Winkelspektrum | Brennlinie (1D): μ = 1, Phase −π/2; Punktfokus (2D): μ = 2 | ◐ 1D | `test_semiclassical.py` |
@@ -42,3 +42,43 @@ Der Fehler fällt wie 1/F, wie in Abschnitt 4 des Papers angegeben.
 | hinter der Brennlinie, R = −20 mm, d = 40 mm (μ = 1) | 1,68·10⁻² | 4,02·10⁻³ |
 
 Verhältnis 4,0 bzw. 4,2: Ordnung O(1/k) bestätigt; die Phase hinter der Brennlinie trägt den Faktor e^(−iπ/2).
+
+## Debye-Fokus per FFT (Issue #1)
+
+Alle Referenzen sind unabhängig vom FFT-Weg.
+
+**Airy-Fall** (U = cos²θ, also konstanter Integrand; f = 2 mm, λ = 0,5 µm; maximaler relativer
+Fehler bis 3 Airy-Radien, Fenster n Punkte über den k-Durchmesser, Nullauffüllung 4):
+
+| n | harte Berandung | subpixelgewichtet |
+| --- | --- | --- |
+| 64 | 6,0·10⁻³ | 2,8·10⁻⁴ |
+| 128 | 1,3·10⁻³ | 6,2·10⁻⁵ |
+| 256 | 1,1·10⁻³ | 1,9·10⁻⁵ |
+| 512 | 1,7·10⁻⁴ | 8,7·10⁻⁶ |
+
+Gleiche Werte für NA 0,5 und 0,9. Die harte Berandung konvergiert unregelmäßig (Gittereffekte),
+die subpixelgewichtete gleichmäßig und um den Faktor 20–60 genauer.
+
+**Defokus auf der Achse** gegen die geschlossene Form (Substitution u = k_z): Fehler ≤ 4,6·10⁻⁴
+für |δz| ≤ 5 µm (NA 0,5, n = 256).
+
+**T4** (NA 0,1, U = 1 in der Austrittsebene, δz über ±1,5 λ/NA², Abweichung relativ zum
+Debye-Maximum, Verschiebungen in Einheiten von λ/NA²):
+
+| N_F | f (mm) | Abweichung Debye–RS | N_F · Abweichung | Fokusverschiebung RS | Debye |
+| --- | --- | --- | --- | --- | --- |
+| 3 | 0,149 | 0,504 | 1,51 | −0,313 | 0 |
+| 10 | 0,495 | 0,172 | 1,72 | −0,118 | 0 |
+| 30 | 1,485 | 0,0527 | 1,58 | −0,040 | 0 |
+| 100 | 4,95 | 0,0153 | 1,53 | −0,012 | 0 |
+| 1000 | 49,5 | 0,00152 | 1,52 | −0,0012 | 0 |
+
+Die Abweichung fällt wie etwa 1,5/N_F; die Fokusverschiebung zeigt zur Linse. Für 1 % Genauigkeit
+braucht die Debye-Näherung hier N_F ≳ 150 (Issue mit Label `paper`, weil Tabelle 7.1 die Grenze
+bei N_F ≲ 10 zieht). Off-axis-Vergleich in 2D steht noch aus (später als `slow`).
+
+**Vektor-Fokus** (aplanatische Linse, x-polarisiert) gegen die Bessel-Quadratur der
+Richards-Wolf-Integrale: maximaler Fehler 1,3·10⁻⁵ (NA 0,5) bzw. 1,9·10⁻⁵ (NA 0,9) relativ zum
+Maximum; Verhältnis der Maxima |E_z|/|E_x| = 0,19 bzw. 0,39. Das Feld ist divergenzfrei
+(∇·E relativ zu k·max|E| < 10⁻³, z-Ableitung über ±2 nm).

@@ -11,7 +11,7 @@
 | `pft` | punktweise Fourier-Transformation | Abschnitt 4, Gl. pft_final |
 | `sft` | semi-analytische Fourier-Transformation, Blendengewichte | Abschnitt 6.4, Gl. sft_formula |
 | `edge` | Kantenwelle, gleichmäßige erfc-Lösung | Abschnitt 6.1, Gl. keller_gtd, fresnel_edge |
-| `focus` | sphärische Austrittsphase, exakte Legendre-Transformation, Airy-Integral | Abschnitt 5.3 |
+| `focus` | sphärische Austrittsphase, exakte Legendre-Transformation, Airy-Integral, Debye-Fokus per FFT (`debye_focus`, skalar und vektoriell) | Abschnitt 5.3, Gl. debye |
 | `lpia` | vektorielles Snellius-Gesetz, Fresnel-Koeffizienten, Operator T | Abschnitt 3.2 |
 | `selection` | Kennzahlen w, F, Kantenverhältnis, Aufwand | Kapitel 7 |
 | `field` | Datenstrukturen der hybriden Darstellung | Abschnitt 1.3, 7.2 |
