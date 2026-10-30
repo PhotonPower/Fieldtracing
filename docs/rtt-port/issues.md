@@ -31,6 +31,8 @@
 
 ## 0 · [Frage] ADR `rtt-field` annehmen
 
+> Angelegt als [Raytatouille #284](https://github.com/PhotonPower/Raytatouille/issues/284) (E7).
+
 **Kontext.** Fieldtracing hat die Bausteine des Field Tracing in Python geprüft und einen
 ADR-Entwurf geschrieben (`docs/rtt-port/adr-entwurf-rtt-field.md` dort).
 
@@ -47,6 +49,8 @@ Eingang (übernimmt die affine Pupillenabbildung, bei hoher NA ungeeignet, siehe
 ---
 
 ## 1 · [Frage] Delaunay, Interpolation und KD-Baum in C++
+
+> Angelegt als [Raytatouille #285](https://github.com/PhotonPower/Raytatouille/issues/285) (E7).
 
 **Kontext.** Fieldtracing nutzt SciPy: `Delaunay` (Maschen der Strahlstartpunkte), lineare und
 Clough-Tocher-Interpolation auf der Triangulierung (nur das Restfeld U), `cKDTree` (nächste Probe

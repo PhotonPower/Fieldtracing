@@ -1,5 +1,7 @@
 # Issue-Entwurf für Raytatouille: FFT-PSF bei verletzter Sinusbedingung
 
+> Angelegt als [Raytatouille #286](https://github.com/PhotonPower/Raytatouille/issues/286) (E7).
+
 > Entwurf aus Fieldtracing (#25, überarbeitet in #60). Nicht in Raytatouille angelegt; Entscheidung
 > beim Maintainer (Fieldtracing AGENTS.md, Regel 8). Stand Raytatouille: Commit aus
 > `rtt-commit.txt`. Vorlage: `.github/ISSUE_TEMPLATE/aufgabe.md` bzw. `frage.md`.

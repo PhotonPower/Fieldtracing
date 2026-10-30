@@ -127,6 +127,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 
 ### Geändert
 
+- Freigegebene Entwürfe als Fragen in Raytatouille angelegt (#284–#286, E7); AGENTS.md Regel 8
+  entsprechend ergänzt.
+
 - F5 abgenommen: Integrationsvorschlag vom Maintainer freigegeben (E6); Vermerk in Roadmap und
   in den Entwürfen unter `docs/rtt-port/` sowie `docs/rtt-entwurf-psf-hohe-na.md`.
 
