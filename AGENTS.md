@@ -56,9 +56,10 @@ Baustein unter `tests/`. Explorative Skripte gehören nach `experiments/` und si
 6. **Hybride Darstellung:** Transformationen geben `(k, residual, phase)` zurück. Interpoliert wird
    nur das glatte Residuum, nie ein Feld oder Spektrum mit schneller Phase (ADR 0003).
 7. **Determinismus:** Zufall nur mit explizitem Seed (`np.random.default_rng(seed)`).
-8. **Raytatouille nur lesen.** Dieses Projekt ändert Raytatouille nicht. Integrationsvorschläge
-   entstehen als Dokumente unter `docs/` (ADR-Entwürfe, Issue-Entwürfe) und gehen über den
-   Maintainer.
+8. **Raytatouille nur lesen.** Dieses Projekt ändert Raytatouille nicht (kein Code, keine Dokumente,
+   keine PRs). Integrationsvorschläge entstehen als Dokumente unter `docs/` (ADR-Entwürfe,
+   Issue-Entwürfe). Seit E7 (`docs/roadmap.md`) dürfen freigegebene Entwürfe als Issues in
+   Raytatouille angelegt werden; alles Weitere geschieht dort nach dessen Prozess.
 9. **Keine Geheimnisse im Repository:** keine Tokens, Passwörter oder persönlichen Pfade in
    Dateien, Commits oder Remote-URLs.
 10. **Unklarheit = Frage, nicht Annahme.** Offene Konventionen als Issue mit Label `frage`.

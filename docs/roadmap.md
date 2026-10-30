@@ -111,7 +111,8 @@ Reihenfolge: #50, dann #51 und #52, zuletzt #53.
 Stand 2026-10-29: alle vier Teile gemergt (Sollwertdateien `reference/field/`, ADR-Entwurf,
 API-Skizze und Issue-Entwürfe unter `docs/rtt-port/`). **Abgenommen: Freigabe durch den Maintainer
 am 2026-10-30 (E6).** Damit kann F6 (Port in Raytatouille) nach dessen Prozess beginnen, mit den
-Entwürfen 0 und 1 aus `docs/rtt-port/issues.md` als erste Fragen.
+Entwürfen 0 und 1 aus `docs/rtt-port/issues.md` als erste Fragen (angelegt als Raytatouille #284 und
+#285, dazu #286 zur FFT-PSF; E7).
 
 ## F4 im Detail
 
@@ -140,6 +141,7 @@ Alle angenommen vom Maintainer am 2026-10-29.
 | E3 | Ort in Raytatouille | neue Bibliothek `rtt-field` in der Schicht Auswertung, oberhalb von `rtt-analysis`; die Reihenfolge legt dort ein ADR fest (Begründung in `docs/integration-raytatouille.md`) |
 | E4 | Erster Integrationspunkt in Raytatouille | Vektor-Debye-PSF aus der Jones-Pupille (schließt die in ADR 0033 ausgelassene Vektor-PSF und die √cos-Faktoren); danach Felder in beliebigen Ebenen mit SFT |
 | E5 | GitHub-Issues für F1 | angelegt am 2026-10-29 (#1–#7); Reihenfolge siehe unten |
+| E7 | Freigegebene Entwürfe in Raytatouille anlegen | erlaubt vom Maintainer am 2026-10-30; angelegt als Fragen Raytatouille #284 (ADR `rtt-field`), #285 (C++-Ersatz für SciPy-Bausteine), #286 (FFT-PSF bei großem δ_max); Aufgaben-Issues erst nach deren Beantwortung |
 | E6 | Integrationsvorschlag F5 (ADR-Entwurf `rtt-field`, API-Skizze, Sollwertdateien, Issue-Entwürfe, PSF-Frage) | freigegeben am 2026-10-30; die Übernahme nach Raytatouille (ADR-Nummer, Issues, Sollwerte) geschieht dort nach dessen Prozess; Raytatouille bleibt für dieses Repository nur lesbar (Regel 8) |
 
 Weitere Festlegungen vom selben Tag:
