@@ -38,7 +38,7 @@ Leitlinien, die sich aus dem Ziel ergeben:
 | **F3 Integrationstest Kapitel 7.5** (#39–#43) ✅ | Beispiel D = 25 mm, NA 0,5: Fokus und Zwischenebene; verkleinertes System gegen direkte Rayleigh-Sommerfeld-Rechnung; vektoriell mit Richards-Wolf | Abweichungen und Punktzahlen dokumentiert; Paper bei Abweichungen korrigiert |
 | **F4 Brücke zu Raytatouille (lesend)** (#22–#25) ✅ | Adapter: Strahldaten aus der Python-API von Raytatouille → `GridlessField` (Phase aus OPL, Amplitude aus weight und Maschen, Polarisation aus PRT) | Debye-Fokus aus Raytatouille-Strahlen = FFT-PSF von Raytatouille bei kleiner NA; Abweichungen bei hoher NA erklärt (√cos, Vektor) |
 | **F5 Integrationsvorschlag** (#50–#53) ✅ | ADR-Entwurf `rtt-field`, API-Skizze, Sollwertdateien für den Port, Issue-Entwürfe im Format von Raytatouille | Freigabe durch den Maintainer |
-| F6 Port (in Raytatouille) | C++-Bibliothek nach Freigabe, nach den Regeln von Raytatouille | dort |
+| F6 Port (in Raytatouille) | C++-Bibliothek nach Freigabe, nach den Regeln von Raytatouille; Start nach Raytatouille 0.9.0 (E8) | dort |
 
 F1 und F4 sind unabhängig voneinander; F2 braucht F1; F3 braucht F2; F5 braucht F3 und F4.
 
@@ -141,6 +141,7 @@ Alle angenommen vom Maintainer am 2026-10-29.
 | E3 | Ort in Raytatouille | neue Bibliothek `rtt-field` in der Schicht Auswertung, oberhalb von `rtt-analysis`; die Reihenfolge legt dort ein ADR fest (Begründung in `docs/integration-raytatouille.md`) |
 | E4 | Erster Integrationspunkt in Raytatouille | Vektor-Debye-PSF aus der Jones-Pupille (schließt die in ADR 0033 ausgelassene Vektor-PSF und die √cos-Faktoren); danach Felder in beliebigen Ebenen mit SFT |
 | E5 | GitHub-Issues für F1 | angelegt am 2026-10-29 (#1–#7); Reihenfolge siehe unten |
+| E8 | Zeitpunkt des Ports | ADR `rtt-field` angenommen (Raytatouille #284, 2026-10-30); Umsetzung erst nach dem Release 0.9.0 (M7): dann `rtt-commit.txt` auf 0.9.0, `pytest -m rtt` erneut, Aufgaben-Issues unter eigenem Meilenstein; #286 unabhängig davon, #285 offen bis zum Start |
 | E7 | Freigegebene Entwürfe in Raytatouille anlegen | erlaubt vom Maintainer am 2026-10-30; angelegt als Fragen Raytatouille #284 (ADR `rtt-field`), #285 (C++-Ersatz für SciPy-Bausteine), #286 (FFT-PSF bei großem δ_max); Aufgaben-Issues erst nach deren Beantwortung |
 | E6 | Integrationsvorschlag F5 (ADR-Entwurf `rtt-field`, API-Skizze, Sollwertdateien, Issue-Entwürfe, PSF-Frage) | freigegeben am 2026-10-30; die Übernahme nach Raytatouille (ADR-Nummer, Issues, Sollwerte) geschieht dort nach dessen Prozess; Raytatouille bleibt für dieses Repository nur lesbar (Regel 8) |
 

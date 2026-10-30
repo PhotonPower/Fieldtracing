@@ -127,6 +127,8 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 
 ### Geändert
 
+- Roadmap: E8 – ADR `rtt-field` in Raytatouille angenommen, Port startet nach Raytatouille 0.9.0.
+
 - Freigegebene Entwürfe als Fragen in Raytatouille angelegt (#284–#286, E7); AGENTS.md Regel 8
   entsprechend ergänzt.
 
