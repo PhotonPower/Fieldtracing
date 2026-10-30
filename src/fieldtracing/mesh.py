@@ -159,27 +159,10 @@ def _two_ring(n: int, triangles: IntArray) -> csr_matrix:
     return ring
 
 
-def fit_derivatives(
+def _quadratic_fit(
     points: FloatArray, values: FloatArray, triangles: IntArray
-) -> tuple[FloatArray, NDArray[np.bool_]]:
-    """Derivative matrices ∂v/∂ρ (N, C, 2) of a field sampled on a triangulated cloud.
-
-    For every node i the fit v(ρ_j) - v(ρ_i) ≈ D·d + ½ dᵀ Q_c d with d = ρ_j - ρ_i runs over
-    the two-ring of mesh neighbours (unweighted least squares, 5 unknowns per component, the
-    node value is kept exactly). The derivative error is O(h²) in the spacing h; quadratic
-    mappings are reproduced to rounding.
-
-    Args:
-        points: (N, 2) sample positions in mm.
-        values: (N,) or (N, C) samples (any unit u).
-        triangles: (M, 3) mesh from `triangulate`; it defines the neighbourhoods, so no fit
-            reaches across a removed obscuration.
-
-    Returns:
-        (derivatives (N, C, 2) in u/mm, rows = components, columns = (∂/∂x, ∂/∂y); valid (N,):
-        False where fewer than five neighbours or a degenerate neighbourhood make the fit
-        undetermined; those rows are NaN).
-    """
+) -> tuple[FloatArray, FloatArray, NDArray[np.bool_]]:
+    """Quadratic least-squares fit over the two-ring: (gradients, Hessians, valid)."""
     p = np.asarray(points, dtype=np.float64)
     v = np.asarray(values, dtype=np.float64)
     scalar = v.ndim == 1
@@ -216,11 +199,56 @@ def fit_derivatives(
     eig = np.linalg.eigvalsh(normal)
     valid = (counts >= MIN_NEIGHBOURS) & (eig[:, 0] > 1e-10 * np.maximum(eig[:, -1], 1e-300))
     out = np.full((n, v2.shape[1], 2), np.nan)
+    hess = np.full((n, v2.shape[1], 2, 2), np.nan)
     if np.any(valid):
         coef = np.linalg.solve(normal[valid], right[valid])  # (n_valid, 5, C)
-        grad = coef[:, :2, :] / scale[valid][:, None, None]
-        out[valid] = np.transpose(grad, (0, 2, 1))
-    return np.asarray(out), np.asarray(valid)
+        sc = scale[valid][:, None]
+        out[valid] = np.transpose(coef[:, :2, :] / sc[..., None], (0, 2, 1))
+        hxx, hxy, hyy = (coef[:, 2 + m, :] / sc**2 for m in range(3))
+        row_x = np.stack([hxx, hxy], axis=-1)
+        row_y = np.stack([hxy, hyy], axis=-1)
+        hess[valid] = np.stack([row_x, row_y], axis=-2)
+    return np.asarray(out), np.asarray(hess), np.asarray(valid)
+
+
+def fit_derivatives(
+    points: FloatArray, values: FloatArray, triangles: IntArray
+) -> tuple[FloatArray, NDArray[np.bool_]]:
+    """Derivative matrices ∂v/∂ρ (N, C, 2) of a field sampled on a triangulated cloud.
+
+    For every node i the fit v(ρ_j) - v(ρ_i) ≈ D·d + ½ dᵀ Q_c d with d = ρ_j - ρ_i runs over
+    the two-ring of mesh neighbours (unweighted least squares, 5 unknowns per component, the
+    node value is kept exactly). The derivative error is O(h²) in the spacing h; quadratic
+    mappings are reproduced to rounding.
+
+    Args:
+        points: (N, 2) sample positions in mm.
+        values: (N,) or (N, C) real samples (any unit u).
+        triangles: (M, 3) mesh from `triangulate`; it defines the neighbourhoods, so no fit
+            reaches across a removed obscuration.
+
+    Returns:
+        (derivatives (N, C, 2) in u/mm, rows = components, columns = (∂/∂x, ∂/∂y); valid (N,):
+        False where fewer than five neighbours or a degenerate neighbourhood make the fit
+        undetermined; those rows are NaN).
+    """
+    grad, _, valid = _quadratic_fit(points, values, triangles)
+    return grad, valid
+
+
+def fit_second_derivatives(
+    points: FloatArray, values: FloatArray, triangles: IntArray
+) -> tuple[FloatArray, NDArray[np.bool_]]:
+    """Second derivatives Q (N, C, 2, 2) from the same quadratic fit as `fit_derivatives`.
+
+    Error O(h); used to estimate interpolation errors (linear interpolation along an edge e
+    misses eᵀQe/8 at its midpoint).
+
+    Returns:
+        (Q in u/mm², symmetric; valid (N,) as in `fit_derivatives`).
+    """
+    _, hess, valid = _quadratic_fit(points, values, triangles)
+    return hess, valid
 
 
 @dataclass(frozen=True)

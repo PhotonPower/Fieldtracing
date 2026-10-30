@@ -127,6 +127,11 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 
 ### Geändert
 
+- Planer: Die Fehlerschätzung der linearen Interpolation von U nutzt die zweiten Ableitungen der
+  quadratischen Maschenanpassung (eᵀQe/8, neu `mesh.fit_second_derivatives`) statt eines
+  Vergleichs mit Clough-Tocher; gleiche Größenordnung (z. B. 3,46·10⁻⁵ gegen 3,47·10⁻⁵), der Port
+  braucht damit kein Clough-Tocher (Vorschlag in Raytatouille #285).
+
 - Roadmap: E8 – ADR `rtt-field` in Raytatouille angenommen, Port startet nach Raytatouille 0.9.0.
 
 - Freigegebene Entwürfe als Fragen in Raytatouille angelegt (#284–#286, E7); AGENTS.md Regel 8
