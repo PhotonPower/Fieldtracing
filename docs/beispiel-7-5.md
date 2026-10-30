@@ -28,7 +28,7 @@ k-Durchmesser (Periode 39 µm), Nullauffüllung 4, Ausgabegitter 312² mit 0,12 
 | Debye 1,5/N_F | 1,0·10⁻⁴ |
 | k-Berandung 0,02/n | 2,6·10⁻⁴ |
 | periodische Kopien (Airy-Hüllkurve bei Periode − L_F/2) | 6,5·10⁻⁴ |
-| Interpolation von U (linear gegen Clough-Tocher) | 1,8·10⁻⁵ |
+| Interpolation von U (eᵀQe/8 aus der quadratischen Maschenanpassung) | 1,8·10⁻⁵ |
 | Taylor-Phase (größte lokale Abweichung) | 4,3·10⁻³ |
 | **Summe** | **5,4·10⁻³** |
 | **gemessen** gegen Richards-Wolf im Fenster (x, y, Diagonale) | **6,5·10⁻⁴** |

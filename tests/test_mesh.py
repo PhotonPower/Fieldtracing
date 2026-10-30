@@ -16,6 +16,7 @@ from fieldtracing._types import FloatArray
 from fieldtracing.lpia import mesh_jacobian
 from fieldtracing.mesh import (
     fit_derivatives,
+    fit_second_derivatives,
     mesh_jacobian_cloud,
     triangle_area_ratio,
     triangulate,
@@ -193,3 +194,12 @@ def test_invalid_input() -> None:
     pts = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
     cloud = mesh_jacobian_cloud(pts, pts)
     assert not np.any(cloud.valid) and np.all(np.isnan(cloud.determinant))
+
+
+def test_second_derivatives_of_a_quadratic_are_exact() -> None:
+    pts, _ = _jittered(15, seed=2)
+    q = np.array([[3.0, -1.5], [-1.5, 0.5]])
+    values = np.stack([0.5 * np.einsum("ni,ij,nj->n", pts, q, pts) + pts[:, 0], pts[:, 1]], 1)
+    hess, valid = fit_second_derivatives(pts, values, triangulate(pts))
+    assert np.all(valid)
+    assert np.allclose(hess[:, 0], q, atol=1e-10) and np.allclose(hess[:, 1], 0.0, atol=1e-10)

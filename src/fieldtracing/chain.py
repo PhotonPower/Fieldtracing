@@ -52,7 +52,13 @@ from fieldtracing.field import GriddedField, GridlessField
 from fieldtracing.focus import debye_focus
 from fieldtracing.fourier import centered_grid, frequency_step, ft, ift
 from fieldtracing.lpia import SagFunction, interface_amplitude, trace_surface
-from fieldtracing.mesh import Region, fit_derivatives, mesh_jacobian_cloud
+from fieldtracing.mesh import (
+    Region,
+    fit_derivatives,
+    fit_second_derivatives,
+    mesh_jacobian_cloud,
+    triangulate,
+)
 from fieldtracing.pft import inverse_pft_2d, pft_2d
 from fieldtracing.propagation import angular_spectrum as angular_spectrum_grid
 from fieldtracing.propagation import longitudinal_wavenumber, rayleigh_sommerfeld_kernel
@@ -839,15 +845,28 @@ def _stop_size(stop: Aperture | None, points: FloatArray) -> float:
 
 
 def _interpolation_error(g: GridlessField, mask: NDArray[np.bool_]) -> float:
-    """Linear residual interpolation error, estimated against Clough-Tocher at edge midpoints."""
+    """Error of the linear interpolation of U (`GridlessField.residual_at`), relative to max|U|.
+
+    Linear interpolation along an edge e misses eᵀQe/8 at its midpoint (Q: second derivatives of
+    U). Q comes from the quadratic least-squares fit of the mesh (`mesh.fit_second_derivatives`),
+    e is the edge from each sample to its nearest neighbour.
+    """
     pts = g.points[mask]
-    if len(pts) < 4:
+    scale = float(np.max(np.abs(g.amplitude[mask]))) if len(pts) else 0.0
+    if len(pts) < 4 or scale == 0.0:
         return 0.0
+    tri = triangulate(g.points)
+    parts = np.concatenate([g.amplitude.real, g.amplitude.imag], axis=1)
+    q, valid = fit_second_derivatives(g.points, parts, tri)
+    i = np.nonzero(mask)[0]
     _, idx = cKDTree(g.points).query(pts, k=2)
-    probes = 0.5 * (pts + g.points[idx[:, 1]])
-    lin, cub = g.residual_at(probes, "linear"), g.residual_at(probes, "cubic")
-    scale = float(np.max(np.abs(g.amplitude[mask])))
-    return float(np.max(np.abs(lin - cub))) / scale if scale > 0.0 else 0.0
+    e = g.points[idx[:, 1]] - pts
+    miss = np.einsum("ni,ncij,nj->nc", e, q[i], e) / 8.0
+    miss = miss[:, :3] + 1j * miss[:, 3:]
+    ok = valid[i]
+    if not np.any(ok):
+        return 0.0
+    return float(np.max(np.linalg.norm(miss[ok], axis=1))) / scale
 
 
 def _phase_taylor_error(g: GridlessField, mask: NDArray[np.bool_]) -> float:
@@ -910,9 +929,10 @@ def plan_propagation(
 
     Error budget (table tab:errors), relative to the largest amplitude in the target plane:
     stationary phase 1/F_min, edge wave w/(sqrt(2π) d_e), Debye 1.5/N_F, hard edge on a grid
-    0.4/q (`selection.grid_edge_error`), interpolation of U (linear against Clough-Tocher), k-disc
-    boundary of the Debye FFT 0.02/n. For a circular stop on a grid the budget does not hold
-    within `parameters["axis_zone_mm"]` of the axis (caustic of the edge wave, see warnings).
+    0.4/q (`selection.grid_edge_error`), interpolation of U (eᵀQe/8 from the quadratic mesh
+    fit), k-disc boundary of the Debye FFT 0.02/n. For a circular stop on a grid the budget
+    does not hold within `parameters["axis_zone_mm"]` of the axis (caustic of the edge wave,
+    see warnings).
 
     Args:
         f: GridlessField in the space domain (the stop is not applied yet).
