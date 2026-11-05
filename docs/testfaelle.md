@@ -8,7 +8,7 @@ Gemessene Werte stammen aus den Tests bzw. aus `experiments/pruefrechnungen_1d.p
 | T1 | Van-Vleck-Kern gegen Rayleigh-Sommerfeld | analytisch: K_RS/K_VV = 1 + i/(kr) | relative Abweichung = 1/(kr) | ✅ | `test_propagation.py` |
 | T2 | Jacobi-Gesetz | Winkelspektrum (exakt) | 1D: Fehler < 2·10⁻², Ordnung O(1/k) (Verhältnis 3–5 bei k × 4); 2D: \|U\| auf 0,3 % | ✅ 1D und 2D | `test_semiclassical.py` |
 | T3 | exakte Phasenkompensation | analytisch | Rest < 10⁻⁶ rad; parabolisch + exaktes k_z: −2819,45 rad | ✅ | `test_focus.py` |
-| T4 | Debye gegen Rayleigh-Sommerfeld, N_F von 3 bis 10³ | exaktes RS-Integral auf der Achse (radiale Quadratur) | Abweichung fällt wie 1/N_F, Fokusverschiebung zur Linse, im Debye-Integral null | ✅ auf der Achse | `test_debye.py` |
+| T4 | Debye gegen Rayleigh-Sommerfeld, N_F von 3 bis 10³ | exaktes RS-Integral auf der Achse (radiale Quadratur) | Abweichung fällt wie 1/N_F, Fokusverschiebung zur Linse, im Debye-Integral null | ✅ auf der Achse und in 2D | `test_debye.py` |
 | T5 | gleichmäßige Kantenformel | direkte Quadratur | relativer Fehler < 1 % für \|x_s − x_e\| ≤ 0,05 mm; Schattengrenze ½; Übergang in die Kantenwelle auf 0,5 % | ✅ 1D und 2D (gleichmäßig an Kanten und Ecken) | `test_edge.py`, `test_edge_2d.py`, `test_edge_uniform.py` |
 | T6 | SFT | direkte Quadratur (1D); geschlossene Formen (2D: Gauß × Chirp, gedrehtes Rechteck über Fresnel-Integrale) | siehe Tabellen unten | ✅ 1D und 2D, allgemeines C | `test_sft.py`, `test_sft_2d.py` |
 | T7 | Maslov-Index | Winkelspektrum | Brennlinie (1D): μ = 1, Phase −π/2; Punktfokus (2D): μ = 2; astigmatisch: μ = 1 zwischen, μ = 2 hinter den Brennlinien | ✅ 1D und 2D | `test_semiclassical.py`, `test_maslov_2d.py` |
@@ -75,7 +75,24 @@ Debye-Maximum, Verschiebungen in Einheiten von λ/NA²):
 | 1000 | 49,5 | 0,00152 | 1,52 | −0,0012 | 0 |
 
 Die Abweichung fällt wie etwa 1,5/N_F; die Fokusverschiebung zeigt zur Linse. Für 1 % Genauigkeit
-braucht die Debye-Näherung hier N_F ≳ 150; das Paper ist entsprechend korrigiert (#8). Off-axis-Vergleich in 2D steht noch aus (später als `slow`).
+braucht die Debye-Näherung hier N_F ≳ 150; das Paper ist entsprechend korrigiert (#8). 
+
+**Außerhalb der Achse (#70):** gleiche Optik (NA 0,1, U = 1), Debye per FFT (n = 128, pad = 4)
+gegen das Rayleigh-Sommerfeld-Integral über die Apertur (Gauß-Legendre in r, Trapez in φ;
+< 10⁻¹¹ Änderung bei 1,5-facher Knotenzahl) auf der x-Achse und der Diagonalen bis 1,2 λ/NA
+(hinter dem zweiten dunklen Ring). Maximale Abweichung relativ zum größten Debye-Wert:
+
+| N_F | δz = −λ/NA² | Fokalebene | δz = +λ/NA² |
+| --- | --- | --- | --- |
+| 3 | 0,71 | 0,097 | 0,39 |
+| 10 | 0,17 | 0,030 | 0,14 |
+| 30 | 0,054 | 0,0099 | 0,051 |
+| 100 | 0,016 | 0,0030 | 0,016 |
+| 1000 | 0,0016 | 3,0·10⁻⁴ | 0,0016 |
+
+Auch in 2D fällt die Abweichung wie c/N_F, mit c ≈ 0,30 in der Fokalebene und c ≈ 1,6 bei
+±λ/NA² (dort wirkt die Fokusverschiebung). Die FFT trägt nichts bei (n = 256 ändert die Werte um
+< 1 %). Laufzeit 0,1 s je Ebene, daher kein `slow`.
 
 **Vektor-Fokus** (aplanatische Linse, x-polarisiert) gegen die Bessel-Quadratur der
 Richards-Wolf-Integrale: maximaler Fehler 1,3·10⁻⁵ (NA 0,5) bzw. 1,9·10⁻⁵ (NA 0,9) relativ zum
