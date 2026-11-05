@@ -130,6 +130,20 @@ Reihenfolge: #22 → #23 → #24 (braucht auch #17 und #18) → #25.
 Abgeschlossen am 2026-10-29: Brücke über ADR 0004 (`rtt_bridge`), Vergleich der PSF in
 `docs/vergleich-psf.md`; Issue-Entwurf für Raytatouille in `docs/rtt-entwurf-psf-hohe-na.md`.
 
+## Nacharbeiten nach F5
+
+Offene Punkte aus `docs/testfaelle.md`, als eigene Issues ohne neuen Meilenstein:
+
+| Issue | Inhalt | Stand |
+| --- | --- | --- |
+| #69 | gleichmäßige Lösung der 2D-Blendenintegrale an Schattengrenzen und Eckübergängen (`edge.py`, Gl. fresnel_edge_2d) | PR #72 |
+| #70 | T4 außerhalb der Achse (Debye gegen Rayleigh-Sommerfeld in 2D) | PR #73 |
+| #71 | Stand im README, Testfall B | dieser PR |
+
+Danach ist der Python-Prototyp vollständig; bekannte, dokumentierte Grenzen bleiben der doppelte
+Kantenübergang (stationärer Punkt auf einer Ecke) und die Achszone rotationssymmetrischer Blenden
+(#31).
+
 ## Entscheidungen
 
 Alle angenommen vom Maintainer am 2026-10-29.

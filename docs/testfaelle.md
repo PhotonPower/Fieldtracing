@@ -13,7 +13,7 @@ Gemessene Werte stammen aus den Tests bzw. aus `experiments/pruefrechnungen_1d.p
 | T6 | SFT | direkte Quadratur (1D); geschlossene Formen (2D: Gauß × Chirp, gedrehtes Rechteck über Fresnel-Integrale) | siehe Tabellen unten | ✅ 1D und 2D, allgemeines C | `test_sft.py`, `test_sft_2d.py` |
 | T7 | Maslov-Index | Winkelspektrum | Brennlinie (1D): μ = 1, Phase −π/2; Punktfokus (2D): μ = 2; astigmatisch: μ = 1 zwischen, μ = 2 hinter den Brennlinien | ✅ 1D und 2D | `test_semiclassical.py`, `test_maslov_2d.py` |
 | T8 | Fresnel-Operator | analytisch | R + T = 1, r_p = −r_s bei 0°, r_p = 0 bei Brewster, Transversalität, Snellius | ✅ | `test_lpia.py` |
-| B | Beispiel Kapitel 7.5 | verkleinertes System gegen RS; Kennzahlen | Kennzahlen wie im Paper | ◐ Kennzahlen, Minimax-Krümmung | `test_selection.py`, `test_curvature_fit.py` |
+| B | Beispiel Kapitel 7.5 | verkleinertes System gegen RS; Kennzahlen | Kennzahlen wie im Paper | ✅ Kennzahlen, Fokus gegen Richards-Wolf, Zwischenebene, verkleinertes System gegen RS (`docs/beispiel-7-5.md`, F3) | `test_selection.py`, `test_curvature_fit.py`, `test_example_7_5.py` |
 
 ## T6: SFT-Fehler (1D, c = 10⁵ mm⁻², a = 1 mm, Fenster 4 mm)
 

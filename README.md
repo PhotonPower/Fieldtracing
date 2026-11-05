@@ -11,8 +11,11 @@ um Field Tracing erweitern. Deshalb gelten hier dieselben Konventionen (mm, µm,
 exp(i(k·r − ωt)), Fresnel-Convention A), und jede Formel wird gegen eine unabhängige Referenz
 getestet, bevor sie portiert wird.
 
-**Stand:** Meilenstein F0 (Fundament). Die 1D-Bausteine und die Testfälle T1–T3, T5–T8 aus
-Kapitel 8 des Papers sind umgesetzt und grün. Der Plan steht in [docs/roadmap.md](docs/roadmap.md).
+**Stand:** Die Meilensteine F0–F5 sind abgeschlossen: alle Bausteine in 1D und 2D, hybride
+Darstellung mit Operatorkette und Planer, Integrationstest des Beispiels aus Abschnitt 7.5, lesende
+Brücke zu Raytatouille und der vom Maintainer freigegebene Integrationsvorschlag (ADR-Entwurf,
+API-Skizze, Sollwertdateien unter `reference/field/`). Der Port (F6) geschieht in Raytatouille nach
+dessen Release 0.9.0. Plan und Nacharbeiten: [docs/roadmap.md](docs/roadmap.md).
 
 ## Installieren und testen
 
@@ -38,8 +41,14 @@ src/fieldtracing/        Python-Paket (Code und Kommentare englisch)
   focus.py               Fokuskette mit exakt sphärischer Phase, Airy-Integral
   lpia.py                vektorielles Snellius-Gesetz, Fresnel-Operator (3×3)
   selection.py           Kennzahlen und Auswahlregeln (Kapitel 7)
-  field.py               Datenstrukturen der hybriden Darstellung (Gerüst für F2)
+  field.py               hybride Darstellung: GridlessField, GriddedField
+  mesh.py                Jacobi-Faktor und Kaustiken aus unstrukturierten Strahlwolken
+  chain.py               Operatoren mit Protokoll, Planer, Operatorkette
+  rtt_bridge.py          Strahldaten aus Raytatouille → hybrides Feld (ADR 0004)
+  results.py             Sollwertdateien im Format raytatouille-result
 tests/                   pytest, ein Testmodul je Baustein, Sollwerte unabhängig berechnet
+reference/field/         Sollwertdateien für den Port
+tools/                   Erzeugen der Sollwertdateien
 experiments/             explorative Skripte (nicht Teil der Tests)
 docs/                    Plan, Konventionen, Architektur, Testfälle, Quellen, ADRs, Paper
 ```
