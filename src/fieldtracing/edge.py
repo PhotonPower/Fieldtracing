@@ -154,6 +154,7 @@ def _uniform_terms(
     rho_s: FloatArray,
     normal: FloatArray,
     phi_ll: Callable[[FloatArray], float],
+    inside: bool,
 ) -> tuple[complex, complex]:
     """Uniform replacement for one critical point of the second kind near a shadow boundary.
 
@@ -168,12 +169,15 @@ def _uniform_terms(
 
     Returns:
         (smoothing: PFT(ρ_s)·(½erfc(z) - step), remainder: S - PFT(ρ_s)·exp(-z²)/(2√π z)), with
-        S the non-uniform second-kind term and step = 1 on the lit side (Δ < 0). The remainder is
+        S the non-uniform second-kind term and step = 1 on the lit side (Δ < 0; for |z| < _Z_MIN
+        step = `inside`, the indicator of ρ_s used by the caller). The remainder is
         bounded; for |z| < _Z_MIN it is replaced by the mean of its values at ρ_s ± ε·H⁻¹ν (ρ_b
         stays critical), which avoids the cancellation 1/z - 1/z.
     """
     pft, z = _pft_and_z(amplitude, phase, k, hessian, rho_b, rho_s, normal, phi_ll)
-    step = 1.0 if z.real < 0.0 else 0.0
+    # on the shadow boundary the side is taken from the caller's indicator (`inside`), so that
+    # indicator and step cancel exactly whatever the rounding of Δ
+    step = 1.0 if (inside if abs(z) < _Z_MIN else z.real < 0.0) else 0.0
     smoothing = complex(pft * (0.5 * erfc(z) - step))
     if abs(z) >= _Z_MIN:
         return smoothing, _remainder(amplitude, phase, k, hessian, rho_b, rho_s, normal, phi_ll)
@@ -241,46 +245,109 @@ def _fresnel_tail(z: complex) -> complex:
     return complex(np.exp(-z * z) / (2.0 * np.sqrt(np.pi) * z))
 
 
+def _a_factor(
+    amplitude: PointFunction,
+    gradient: RealPointFunction,
+    k: FloatArray,
+    p: FloatArray,
+    normal: FloatArray,
+) -> ComplexArray:
+    """A = U (ν·∇Φ)/(i|∇Φ|²) at the points p (N, 2), the amplitude of eq. (bdw)."""
+    gp = gradient(p) - k[None, :]
+    return np.asarray(
+        amplitude(p) * (gp @ normal) / (1j * np.sum(gp * gp, axis=1)), dtype=np.complex128
+    )
+
+
 def _uniform_edge(
+    a: FloatArray,
+    t: FloatArray,
+    length: float,
+    amplitude: PointFunction,
+    phase: RealPointFunction,
+    gradient: RealPointFunction,
+    k: FloatArray,
+    hessian: FloatArray,
+    inside: bool,
+) -> tuple[complex, complex, complex]:
+    """Uniform contributions of one polygon edge a → a + length·t (quadratic phase, tᵀHt ≠ 0).
+
+    Along the edge Φ(l) is quadratic with Φ'' = tᵀHt and stationary at l_s (critical point of
+    the second kind, continued beyond the edge if necessary). The edge integral of eq. (bdw) is
+    then the 1D integral of eq. (edge_integral) between two end points, so eq. (fresnel_edge)
+    applies to each end: V = ½erfc(z_L) - ½erfc(z_0), z_e = exp(-iπ/4·sgn Φ'')·sqrt(|Φ''|/2)·
+    (l_s - l_e). With X the (finite) amplitude of the second-kind point - the shadow-uniform
+    terms from `_uniform_terms` - the contributions are V·smoothing, V·remainder and per corner
+    the bracket ±(A e^{iΦ}/(iΦ_l) - X·exp(-z_e²)/(2√π z_e)). A bracket is bounded as z_e → 0;
+    for |z_e| < _Z_MIN it is the mean of its values with l_s shifted to z_e = ±2·_Z_MIN (k
+    shifted by ±H t δl), which avoids the cancellation 1/z - 1/z.
+
+    Returns:
+        (first, second, third) contributions as in `polygon_asymptotics`.
+    """
+    slope = float(t @ hessian @ t)
+    normal = np.array([t[1], -t[0]])
+    v, smoothing, correction, brackets, z = _edge_terms(
+        a, t, normal, length, slope, amplitude, phase, gradient, k, hessian, inside
+    )
+    shift = 2.0 * _Z_MIN / np.sqrt(abs(slope) / 2.0)  # δl with |Δz_e| = 2·_Z_MIN
+    for end in (0, 1):
+        if abs(z[end]) < _Z_MIN:
+            brackets[end] = 0.5 * sum(
+                _edge_terms(
+                    a,
+                    t,
+                    normal,
+                    length,
+                    slope,
+                    amplitude,
+                    phase,
+                    gradient,
+                    k + sign * shift * (hessian @ t),
+                    hessian,
+                    inside,
+                )[3][end]
+                for sign in (-1.0, 1.0)
+            )
+    return complex(v * smoothing), complex(v * correction), complex(brackets[1] - brackets[0])
+
+
+def _edge_terms(
     a: FloatArray,
     t: FloatArray,
     normal: FloatArray,
     length: float,
     slope: float,
-    phi_l0: float,
-    terms: ComplexArray,
     amplitude: PointFunction,
     phase: RealPointFunction,
+    gradient: RealPointFunction,
     k: FloatArray,
     hessian: FloatArray,
-    rho_s: FloatArray,
-) -> tuple[complex, complex, complex]:
-    """Uniform contributions of one polygon edge a → a + length·t (quadratic phase).
-
-    Along the edge Φ(l) is quadratic with Φ'' = `slope` and stationary at l_s (critical point of
-    the second kind, continued beyond the edge if necessary). The edge integral of eq. (bdw) is
-    then the 1D integral of eq. (edge_integral) between two end points, so eq. (fresnel_edge)
-    applies to each end: V = ½erfc(z_L) - ½erfc(z_0), z_e = exp(-iπ/4·sgn Φ'')·sqrt(|Φ''|/2)·
-    (l_s - l_e). With X the (finite) amplitude of the second-kind point - its raw term S, or
-    the shadow-uniform remainder from `_uniform_terms` - the contributions are
-    V·smoothing, V·(X - smoothing) and the corner terms minus X times their Fresnel tails.
-
-    Returns:
-        (first, second, third) contributions as in `polygon_asymptotics`.
-    """
+    inside: bool,
+) -> tuple[complex, complex, complex, ComplexArray, ComplexArray]:
+    """(V, smoothing, remainder, corner brackets at l = 0 and L, (z_0, z_L)) of `_uniform_edge`."""
+    rho_s = np.linalg.solve(hessian, k - gradient(np.zeros((1, 2)))[0])
+    phi_l0 = float(t @ (gradient(a[None, :])[0] - k))
     l_s = -phi_l0 / slope
     smoothing, correction = _uniform_terms(
-        amplitude, phase, k, hessian, a + l_s * t, rho_s, normal, _constant(slope)
+        amplitude, phase, k, hessian, a + l_s * t, rho_s, normal, _constant(slope), inside
     )
     amplitude_x = smoothing + correction
     scale = np.exp(-0.25j * np.pi * np.sign(slope)) * np.sqrt(abs(slope) / 2.0)
-    z = scale * np.array([l_s, l_s - length])  # z_0, z_L
-    v = 0.5 * (erfc(z[1]) - erfc(z[0]))
-    third = 0j
-    for sign, z_e, term in ((-1.0, z[0], terms[0]), (1.0, z[1], terms[1])):
-        if abs(z_e) > 1e-8:  # at z_e = 0 the bracket has a finite limit of higher order
-            third += sign * (complex(term) - amplitude_x * _fresnel_tail(complex(z_e)))
-    return complex(v * smoothing), complex(v * correction), third
+    z = np.asarray(scale * np.array([l_s, l_s - length]), dtype=np.complex128)
+    ends = np.stack([a, a + length * t])
+    phi_l = np.array([phi_l0, phi_l0 + slope * length])
+    brackets = np.zeros(2, dtype=np.complex128)
+    for end in (0, 1):
+        if z[end] != 0.0:
+            corner = (
+                _a_factor(amplitude, gradient, k, ends[end : end + 1], normal)[0]
+                * np.exp(1j * (phase(ends[end : end + 1])[0] - ends[end] @ k))
+                / (1j * phi_l[end])
+            )
+            brackets[end] = corner - amplitude_x * _fresnel_tail(complex(z[end]))
+    v = complex(0.5 * (erfc(z[1]) - erfc(z[0])))
+    return v, smoothing, correction, brackets, z
 
 
 def polygon_asymptotics(
@@ -318,7 +385,8 @@ def polygon_asymptotics(
     g0 = gradient(np.zeros((1, 2)))[0]
     rho_s = np.linalg.solve(h, k - g0)
     pft = _stationary_area_term(rho_s, amplitude, phase, h, k)
-    first = pft if _inside(v, rho_s) else 0j
+    inside = _inside(v, rho_s)
+    first = pft if inside else 0j
 
     def a_factor(p: FloatArray, normal: FloatArray) -> ComplexArray:
         gp = gradient(p) - k[None, :]
@@ -343,20 +411,7 @@ def polygon_asymptotics(
                 a_factor(ends, normal) * np.exp(1j * (phase(ends) - ends @ k)) / (1j * phi_l_ends)
             )
         if uniform and slope != 0.0:
-            s1, s2, s3 = _uniform_edge(
-                a,
-                t,
-                normal,
-                length,
-                slope,
-                phi_l0,
-                terms,
-                amplitude,
-                phase,
-                k,
-                h,
-                rho_s,
-            )
+            s1, s2, s3 = _uniform_edge(a, t, length, amplitude, phase, gradient, k, h, inside)
             first, second, third = first + s1, second + s2, third + s3
             continue
         third += complex(terms[1] - terms[0])
@@ -395,7 +450,8 @@ def circle_asymptotics(
     g0 = gradient(np.zeros((1, 2)))[0]
     rho_s = np.linalg.solve(h, k - g0)
     pft = _stationary_area_term(rho_s, amplitude, phase, h, k)
-    first = pft if float(rho_s @ rho_s) < radius * radius else 0j
+    inside = float(rho_s @ rho_s) < radius * radius
+    first = pft if inside else 0j
 
     def tangential(theta: float) -> float:
         p = radius * np.array([[np.cos(theta), np.sin(theta)]])
@@ -414,7 +470,7 @@ def circle_asymptotics(
         phi_ll = float(t @ h @ t - (nu @ gp) / radius)
         if uniform:
             smoothing, correction = _uniform_terms(
-                amplitude, phase, k, h, p[0], rho_s, nu, _circle_phi_ll(h, t, nu, radius)
+                amplitude, phase, k, h, p[0], rho_s, nu, _circle_phi_ll(h, t, nu, radius), inside
             )
             first += smoothing
             second += correction

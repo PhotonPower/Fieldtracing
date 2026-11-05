@@ -387,7 +387,7 @@ def selection_rules() -> dict[str, Any]:
 def edge_uniform_rectangle() -> dict[str, Any]:
     a, b, cx, cy = 0.5, 0.3, 2000.0, -1500.0
     vertices = np.array([[-a, -b], [a, -b], [a, b], [-a, b]])
-    ky_rel = np.array([0.9, 0.95, 1.0, 1.05, 1.1])
+    ky_rel = np.array([0.9, 0.95, 1.05, 1.1])
     k = np.stack([0.5 * cx * a * np.ones_like(ky_rel), ky_rel * cy * b], axis=1)
 
     def ones(p: FloatArray) -> ComplexArray:
@@ -432,7 +432,8 @@ def edge_uniform_rectangle() -> dict[str, Any]:
             "third": terms[:, 2],
             "integral": terms.sum(axis=1),
         },
-        {"rel": 1e-10, "abs": 1e-14},
+        # the second-kind remainder vanishes here up to rounding: absolute tolerance
+        {"rel": 1e-10, "abs": 1e-12 * float(np.max(np.abs(closed)))},
         {"integral": closed},
         {"rel": 5e-4},
     )

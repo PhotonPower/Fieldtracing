@@ -74,15 +74,26 @@ def _rel(exact: complex, approx: complex) -> float:
     return abs(approx - exact) / abs(exact)
 
 
-@pytest.mark.parametrize("ky", [0.9, 0.95, 1.0, 1.05, 1.1])
+@pytest.mark.parametrize("ky", [0.9, 0.95, 1.05, 1.1])
 def test_rectangle_across_shadow_boundary_of_an_edge(ky: float) -> None:
-    # stationary point crosses the edge y = B (shadow side for ky > 1); the second-kind points of
-    # the edges x = ±A pass the corners at the same time (ky = 1)
+    # stationary point near the edge y = B (shadow side for ky > 1)
     errors = [_rel(*_rect(s, (0.5, ky), uniform=True)) for s in (1.0, 4.0)]
     assert errors[0] < 5e-4
-    assert errors[0] / errors[1] > 7.0  # at least O(1/k) at the transition
-    if ky != 1.0:
-        assert _rel(*_rect(1.0, (0.5, ky), uniform=False)) > 100 * errors[0]
+    assert errors[0] / errors[1] > 7.0  # better than O(1/k) here
+    assert _rel(*_rect(1.0, (0.5, ky), uniform=False)) > 100 * errors[0]
+
+
+def test_rectangle_double_transition() -> None:
+    # ky = 1: the stationary point lies on the edge y = B while the second-kind points of the edges
+    # x = ±A sit on the corners (H diagonal in the edge axes). Here the error is O(1/k) and the
+    # result has a small jump across the shadow line; the plain formula divides by zero.
+    for ky in (1.0 - 1e-6, 1.0, 1.0 + 1e-6):
+        errors = [_rel(*_rect(s, (0.5, ky), uniform=True)) for s in (1.0, 4.0, 16.0)]
+        assert errors[0] < 4e-3
+        assert errors[0] / errors[1] > 3.5 and errors[1] / errors[2] > 3.5
+    below = _rect(1.0, (0.5, 1.0 - 1e-12), uniform=True)[1]
+    above = _rect(1.0, (0.5, 1.0 + 1e-12), uniform=True)[1]
+    assert abs(above - below) < 1e-3 * abs(above)
 
 
 @pytest.mark.parametrize(("ky", "tol"), [(0.97, 5e-2), (0.99, 0.2), (1.01, 0.2), (1.03, 7e-2)])

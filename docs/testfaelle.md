@@ -195,7 +195,7 @@ Lösung, Skalierung s = 1 → 4 (→ 16):
 | --- | --- | --- | --- |
 | Rechteck, k_y/(c_y b) = 0,9 | Fresnel-Integrale | 14 % | 4,0·10⁻⁵ → 8,2·10⁻⁷ |
 | Rechteck, 0,95 | | 61 % | 1,7·10⁻⁴ → 4,9·10⁻⁶ |
-| Rechteck, 1,0 (Schattengrenze, zugleich Eckübergang) | | Division durch null | 2,9·10⁻⁴ → 3,6·10⁻⁵ |
+| Rechteck, 1,0 ± 10⁻⁶ (doppelter Übergang, siehe unten) | | Division durch null | 3,0·10⁻³ → 7,1·10⁻⁴ → 1,7·10⁻⁴ |
 | Rechteck, 1,05 | | 115 % | 3,3·10⁻⁴ → 1,6·10⁻⁵ |
 | Rechteck, Doppelschatten k_x = 1,3, k_y = 0,99 (Eckübergang) | | 576 % | 0,14 → 1,2·10⁻² → 1,1·10⁻³ |
 | Rechteck, k_x = 1,3, k_y = 1,03 | | 198 % | 4,9·10⁻² → 4,7·10⁻³ → 4,6·10⁻⁴ |
@@ -206,10 +206,17 @@ Lösung, Skalierung s = 1 → 4 (→ 16):
 | Dreieck, gleiches H und U, ρ_s 0,02 mm innen / auf / außen an einer Kante | 2D-Gauß-Quadratur (Duffy) | 24 % / ∞ / 67 % | 3,1/2,8/2,6·10⁻³ → 7,6/6,9/6,7·10⁻⁴ |
 
 Der Fehler fällt an der Übergangsstelle mindestens wie 1/k, also eine halbe Ordnung schneller als
-der Beitrag eines Punkts 2. Art. Fern aller Übergänge ist die gleichmäßige Lösung nie schlechter
+der Beitrag eines Punkts 2. Art. Ein Sonderfall ist der doppelte Übergang beim Rechteck mit H
+diagonal in den Kantenachsen: Liegt ρ_s auf der Kante y = b, sitzen zugleich die Punkte 2. Art der
+Kanten x = ±a auf den Ecken. Dort ist der Fehler nur O(1/k) (3·10⁻³ bei s = 1), und das Ergebnis
+springt beim Überqueren der Schattenlinie um etwa 6·10⁻⁴ (relativ), weil die Glättung des
+Indikators mit dem Kantenfaktor V gewichtet ist. Eckklammern mit |z_e| < 10⁻³ und Reste mit
+|z| < 10⁻³ werden als Mittel zweier Nachbarpunkte gebildet, und auf der Schattenlinie bestimmt
+der Indikator die Seite; damit hängt das Ergebnis nicht von Rundungen ab (Störung der Eingaben um
+10⁻¹⁵ ändert es um < 10⁻⁹). Fern aller Übergänge ist die gleichmäßige Lösung nie schlechter
 als die gewöhnliche (Rechteck: gleich oder besser in allen Fällen der vorigen Tabelle). Die
 Referenzquadraturen ändern sich bei 1,4-facher Knotenzahl um < 10⁻¹¹. Nicht gleichmäßig bleibt
-der doppelte Übergang, bei dem der stationäre Punkt selbst auf eine Ecke trifft.
+der Fall, in dem der stationäre Punkt selbst auf eine Ecke trifft.
 
 ## LPIA an gekrümmten Flächen mit Strahlnetz (Issue #6)
 
