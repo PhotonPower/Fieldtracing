@@ -141,6 +141,8 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   braucht damit kein Clough-Tocher (Vorschlag in Raytatouille #285).
 
 - Roadmap: E8 – ADR `rtt-field` in Raytatouille angenommen, Port startet nach Raytatouille 0.9.0.
+- Roadmap und README: E8 nachgezogen, der Port startet nach Raytatouille v1.0 (M8), wie vom
+  Maintainer am 2026-10-30 in Raytatouille #284/#285 entschieden.
 
 - Freigegebene Entwürfe als Fragen in Raytatouille angelegt (#284–#286, E7); AGENTS.md Regel 8
   entsprechend ergänzt.

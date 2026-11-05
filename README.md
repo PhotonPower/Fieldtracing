@@ -15,7 +15,7 @@ getestet, bevor sie portiert wird.
 Darstellung mit Operatorkette und Planer, Integrationstest des Beispiels aus Abschnitt 7.5, lesende
 Brücke zu Raytatouille und der vom Maintainer freigegebene Integrationsvorschlag (ADR-Entwurf,
 API-Skizze, Sollwertdateien unter `reference/field/`). Der Port (F6) geschieht in Raytatouille nach
-dessen Release 0.9.0. Plan und Nacharbeiten: [docs/roadmap.md](docs/roadmap.md).
+dessen Release v1.0 (M8). Plan und Nacharbeiten: [docs/roadmap.md](docs/roadmap.md).
 
 ## Installieren und testen
 
