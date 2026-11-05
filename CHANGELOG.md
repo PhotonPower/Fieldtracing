@@ -169,3 +169,5 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   Abschnitt 5.3, Tabellen 7.1 und 7.3, Testliste in Kapitel 8 (#8).
 
 - Entscheidungen E1–E5 und ADR 0001–0003 angenommen (`docs/roadmap.md`).
+- Entwurf `docs/rtt-fusion/plan.md`: Vorgehen nach Raytatouille v1.0 (Port von Field Tracing,
+  wellenoptische Blackbox mit Ports, Pfadplanung, Pilotfälle), Verweis in der Roadmap.

@@ -144,6 +144,13 @@ Danach ist der Python-Prototyp vollständig; bekannte, dokumentierte Grenzen ble
 Kantenübergang (stationärer Punkt auf einer Ecke) und die Achszone rotationssymmetrischer Blenden
 (#31).
 
+## Ausblick: Raytatouille Fusion
+
+Nach dem Port soll Raytatouille externe wellenoptische Löser (vektorielles BPM, RCWA, BEM, FEM,
+bio-optisches Modul) als Gebiete mit Ports einbinden und Pfade durch Gebiete verschiedener
+Verfahren planen. Entwurf mit Phasen P0–P5, Darstellungen, Blackbox-Schnittstelle, Pfadplanung,
+Pilotfällen und offenen Entscheidungen: [docs/rtt-fusion/plan.md](rtt-fusion/plan.md).
+
 ## Entscheidungen
 
 Alle angenommen vom Maintainer am 2026-10-29.
