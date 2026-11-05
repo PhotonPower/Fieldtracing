@@ -172,7 +172,7 @@ Diese Teile sollten in P1 so geschnitten werden, dass P3 sie ohne Umbau wiederve
 
 Ein **Gebiet** ist ein räumlicher Bereich, in dem genau ein Verfahren rechnet: ein Abschnitt
 sequenzieller Flächen (Raytracing), freie Ausbreitung (Field Tracing), oder ein externer Löser
-(BPM, RCWA, BEM, FEM, bio-optisch). Gebiete tauschen Licht nur über **Ports** aus. Ein Port hat:
+(BWPM, FourierGrating, hp-FEM, CliffordBem, SpeckleBem). Gebiete tauschen Licht nur über **Ports** aus. Ein Port hat:
 
 - eine Geometrie: Ebene mit lokalem Koordinatensystem und Ausdehnung, oder geschlossene Fläche
   (Kugel, Hüllquader) bei Streukörpern;
