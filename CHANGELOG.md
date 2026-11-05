@@ -84,6 +84,11 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   `docs/rtt-entwurf-psf-hohe-na.md` (#25).
 - `GridlessField.residual_at(..., outside="nearest")` (#25).
 
+- Gleichmäßige Lösung der 2D-Blendenintegrale an Schattengrenzen (Gl. fresnel_edge_2d, neu im
+  Paper): `edge.polygon_asymptotics` und `edge.circle_asymptotics` mit `uniform=True`, auch für
+  Punkte 2. Art, die über eine Ecke wandern; Tests `test_edge_uniform.py` gegen Fresnel-Integrale,
+  Hankel- und 2D-Quadratur, Sollwertdatei `edge_uniform_rectangle` (#69).
+
 ### Behoben
 
 - `semiclassical.propagate_2d`: Die Strahlabbildung ∂ρ₂/∂ρ₁ wurde transponiert gebildet

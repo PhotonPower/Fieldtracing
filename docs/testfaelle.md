@@ -9,7 +9,7 @@ Gemessene Werte stammen aus den Tests bzw. aus `experiments/pruefrechnungen_1d.p
 | T2 | Jacobi-Gesetz | Winkelspektrum (exakt) | 1D: Fehler < 2·10⁻², Ordnung O(1/k) (Verhältnis 3–5 bei k × 4); 2D: \|U\| auf 0,3 % | ✅ 1D und 2D | `test_semiclassical.py` |
 | T3 | exakte Phasenkompensation | analytisch | Rest < 10⁻⁶ rad; parabolisch + exaktes k_z: −2819,45 rad | ✅ | `test_focus.py` |
 | T4 | Debye gegen Rayleigh-Sommerfeld, N_F von 3 bis 10³ | exaktes RS-Integral auf der Achse (radiale Quadratur) | Abweichung fällt wie 1/N_F, Fokusverschiebung zur Linse, im Debye-Integral null | ✅ auf der Achse | `test_debye.py` |
-| T5 | gleichmäßige Kantenformel | direkte Quadratur | relativer Fehler < 1 % für \|x_s − x_e\| ≤ 0,05 mm; Schattengrenze ½; Übergang in die Kantenwelle auf 0,5 % | ✅ 1D | `test_edge.py` |
+| T5 | gleichmäßige Kantenformel | direkte Quadratur | relativer Fehler < 1 % für \|x_s − x_e\| ≤ 0,05 mm; Schattengrenze ½; Übergang in die Kantenwelle auf 0,5 % | ✅ 1D und 2D (gleichmäßig an Kanten und Ecken) | `test_edge.py`, `test_edge_2d.py`, `test_edge_uniform.py` |
 | T6 | SFT | direkte Quadratur (1D); geschlossene Formen (2D: Gauß × Chirp, gedrehtes Rechteck über Fresnel-Integrale) | siehe Tabellen unten | ✅ 1D und 2D, allgemeines C | `test_sft.py`, `test_sft_2d.py` |
 | T7 | Maslov-Index | Winkelspektrum | Brennlinie (1D): μ = 1, Phase −π/2; Punktfokus (2D): μ = 2; astigmatisch: μ = 1 zwischen, μ = 2 hinter den Brennlinien | ✅ 1D und 2D | `test_semiclassical.py`, `test_maslov_2d.py` |
 | T8 | Fresnel-Operator | analytisch | R + T = 1, r_p = −r_s bei 0°, r_p = 0 bei Brewster, Transversalität, Snellius | ✅ | `test_lpia.py` |
@@ -178,8 +178,38 @@ Produkt zweier Fresnel-Integrale:
 | (0,5; 0,9) | nahe Schattengrenze in y | 21 % → 4,7 % | 14 % → 2,3 % |
 
 Im beleuchteten Bereich ist die PFT allein über 10-mal schlechter als mit Kanten und Ecken. Nahe
-einer Schattengrenze versagt die Randdarstellung (|∇Φ| → 0 am Rand); dort braucht es die
-gleichmäßige Lösung, in 2D noch offen.
+einer Schattengrenze versagt die Randdarstellung (|∇Φ| → 0 am Rand); dort gilt die gleichmäßige
+Lösung (nächster Abschnitt).
+
+## Gleichmäßige Lösung an Schattengrenzen in 2D
+
+`polygon_asymptotics(..., uniform=True)` und `circle_asymptotics(..., uniform=True)` nach
+Gl. (fresnel_edge_2d): Der stationäre Punkt wird auch außerhalb der Blende mitgenommen und mit
+½·erfc(z) über die Kante geglättet; der Punkt 2. Art bekommt den Rest S − PFT·e^{−z²}/(2√π z), der
+für z → 0 beschränkt bleibt (für |z| < 10⁻³ Mittel zweier Nachbarpunkte, keine Auslöschung). Bei
+Polygonen bekommt außerdem jede Kante an ihren Endpunkten denselben Fresnel-Faktor
+(Punkt 2. Art wandert über eine Ecke). Relativer Fehler, links ohne, rechts mit gleichmäßiger
+Lösung, Skalierung s = 1 → 4 (→ 16):
+
+| Fall | Referenz | ohne (s = 1) | mit, s = 1 → 4 (→ 16) |
+| --- | --- | --- | --- |
+| Rechteck, k_y/(c_y b) = 0,9 | Fresnel-Integrale | 14 % | 4,0·10⁻⁵ → 8,2·10⁻⁷ |
+| Rechteck, 0,95 | | 61 % | 1,7·10⁻⁴ → 4,9·10⁻⁶ |
+| Rechteck, 1,0 (Schattengrenze, zugleich Eckübergang) | | Division durch null | 2,9·10⁻⁴ → 3,6·10⁻⁵ |
+| Rechteck, 1,05 | | 115 % | 3,3·10⁻⁴ → 1,6·10⁻⁵ |
+| Rechteck, Doppelschatten k_x = 1,3, k_y = 0,99 (Eckübergang) | | 576 % | 0,14 → 1,2·10⁻² → 1,1·10⁻³ |
+| Rechteck, k_x = 1,3, k_y = 1,03 | | 198 % | 4,9·10⁻² → 4,7·10⁻³ → 4,6·10⁻⁴ |
+| Kreis, H = c·I, U = 1, k/(cR) = 0,97 | Hankel-Quadratur | 30 % | 5,3·10⁻⁶ → 2,8·10⁻⁷ |
+| Kreis, 1,0 | | Division durch null | 9,5·10⁻⁶ → 7,0·10⁻⁷ |
+| Kreis, 1,03 | | 76 % | 7,4·10⁻⁶ → 2,1·10⁻⁶ |
+| Kreis, H gedreht (3000/2000 mm⁻²), U Gauß mit Steigung, ρ_s bei 0,97 R / R / 1,03 R | 2D-Gauß-Quadratur | – | 2,6/1,1/1,8·10⁻⁴ → 5,1/1,4/5,1·10⁻⁵ |
+| Dreieck, gleiches H und U, ρ_s 0,02 mm innen / auf / außen an einer Kante | 2D-Gauß-Quadratur (Duffy) | 24 % / ∞ / 67 % | 3,1/2,8/2,6·10⁻³ → 7,6/6,9/6,7·10⁻⁴ |
+
+Der Fehler fällt an der Übergangsstelle mindestens wie 1/k, also eine halbe Ordnung schneller als
+der Beitrag eines Punkts 2. Art. Fern aller Übergänge ist die gleichmäßige Lösung nie schlechter
+als die gewöhnliche (Rechteck: gleich oder besser in allen Fällen der vorigen Tabelle). Die
+Referenzquadraturen ändern sich bei 1,4-facher Knotenzahl um < 10⁻¹¹. Nicht gleichmäßig bleibt
+der doppelte Übergang, bei dem der stationäre Punkt selbst auf eine Ecke trifft.
 
 ## LPIA an gekrümmten Flächen mit Strahlnetz (Issue #6)
 
