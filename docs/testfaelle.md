@@ -235,6 +235,11 @@ als die gewöhnliche (Rechteck: gleich oder besser in allen Fällen der vorigen 
 Referenzquadraturen ändern sich bei 1,4-facher Knotenzahl um < 10⁻¹¹. Nicht gleichmäßig bleibt
 der Fall, in dem der stationäre Punkt selbst auf eine Ecke trifft.
 
+Die Konvergenztests mit s = 4 (`pytest -m slow tests/test_edge_uniform.py`, Kreis und Dreieck mit
+allgemeinem H und Gauß-Amplitude, je drei Lagen von ρ_s) liefen am 2026-11-05 auf dem Rechner des
+Maintainers (Linux, Python 3.13.5): 6 bestanden in 64 s. Der schnelle Lauf ergab dort 215
+bestanden, 11 übersprungen (Marker `rtt`) in 140 s.
+
 ## LPIA an gekrümmten Flächen mit Strahlnetz (Issue #6)
 
 n₁ = 1, n₂ = 1,5, λ = 0,5 µm. Amplitude nach Gl. (interface_amplitude) mit Jacobi-Matrix aus den
