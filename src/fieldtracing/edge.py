@@ -3,7 +3,8 @@
 - `edge_wave_1d`: boundary term of the integration by parts, eq. (keller_gtd).
 - `uniform_edge_factor`: uniform Fresnel solution, eq. (fresnel_edge), Ẽ = Ẽ_PFT·factor.
 - 2D apertures (section 6.2): boundary-diffraction integral, eq. (bdw), and its asymptotics by
-  critical points of the second kind (edges) and third kind (corners).
+  critical points of the second kind (edges) and third kind (corners); optionally uniform across
+  shadow boundaries of edges and across vertex transitions, eq. (fresnel_edge_2d).
 """
 
 from __future__ import annotations
@@ -141,6 +142,214 @@ def _stationary_area_term(
     )
 
 
+_Z_MIN = 1e-3  # below |z| the remainder is taken as the mean of two points at |z| = 2·_Z_MIN
+
+
+def _uniform_terms(
+    amplitude: PointFunction,
+    phase: RealPointFunction,
+    k: FloatArray,
+    hessian: FloatArray,
+    rho_b: FloatArray,
+    rho_s: FloatArray,
+    normal: FloatArray,
+    phi_ll: Callable[[FloatArray], float],
+    inside: bool,
+) -> tuple[complex, complex]:
+    """Uniform replacement for one critical point of the second kind near a shadow boundary.
+
+    The stationary point ρ_s and the critical point ρ_b of the second kind (outward normal ν,
+    Φ_ll(d) along the boundary at ρ_b as a function of d = ρ_b - ρ_s) coalesce on the shadow
+    boundary. Integrating along the boundary by stationary phase reduces the area integral to the
+    1D edge integral (eq. edge_integral) with the effective curvature h = det H / Φ_ll, and
+    eq. (fresnel_edge) gives the factor ½·erfc(z), z = exp(-iπ/4·sgn h)·sqrt(|h|/2)·Δ, Δ > 0 in
+    the shadow. For constant H, Φ_b - Φ_s = ½·dᵀHd = ½·h·Δ² fixes |Δ| and ν·∇Φ_b = ν·Hd ≈ -h·Δ
+    its sign; both come from d, so they stay consistent down to d = 0. For a straight edge,
+    quadratic ψ and constant U the result is exact (paper, eq. fresnel_edge_2d).
+
+    Returns:
+        (smoothing: PFT(ρ_s)·(½erfc(z) - step), remainder: S - PFT(ρ_s)·exp(-z²)/(2√π z)), with
+        S the non-uniform second-kind term and step = 1 on the lit side (Δ < 0; for |z| < _Z_MIN
+        step = `inside`, the indicator of ρ_s used by the caller). The remainder is
+        bounded; for |z| < _Z_MIN it is replaced by the mean of its values at ρ_s ± ε·H⁻¹ν (ρ_b
+        stays critical), which avoids the cancellation 1/z - 1/z.
+    """
+    pft, z = _pft_and_z(amplitude, phase, k, hessian, rho_b, rho_s, normal, phi_ll)
+    # on the shadow boundary the side is taken from the caller's indicator (`inside`), so that
+    # indicator and step cancel exactly whatever the rounding of Δ
+    step = 1.0 if (inside if abs(z) < _Z_MIN else z.real < 0.0) else 0.0
+    smoothing = complex(pft * (0.5 * erfc(z) - step))
+    if abs(z) >= _Z_MIN:
+        return smoothing, _remainder(amplitude, phase, k, hessian, rho_b, rho_s, normal, phi_ll)
+    shift = np.linalg.solve(hessian, normal)
+    _, z_unit = _pft_and_z(
+        amplitude, phase, k, hessian, rho_b, rho_s + shift, normal, phi_ll
+    )  # |z| grows linearly with the shift near the shadow boundary
+    shift *= 2.0 * _Z_MIN / max(abs(z_unit - z), 1e-300)
+    remainder = 0.5 * (
+        _remainder(amplitude, phase, k, hessian, rho_b, rho_s + shift, normal, phi_ll)
+        + _remainder(amplitude, phase, k, hessian, rho_b, rho_s - shift, normal, phi_ll)
+    )
+    return smoothing, remainder
+
+
+def _pft_and_z(
+    amplitude: PointFunction,
+    phase: RealPointFunction,
+    k: FloatArray,
+    hessian: FloatArray,
+    rho_b: FloatArray,
+    rho_s: FloatArray,
+    normal: FloatArray,
+    phi_ll: Callable[[FloatArray], float],
+) -> tuple[complex, complex]:
+    """PFT term at ρ_s and the Fresnel argument z of `_uniform_terms`."""
+    pft = _stationary_area_term(rho_s, amplitude, phase, hessian, k)
+    d = rho_b - rho_s
+    hd = hessian @ d
+    h = float(np.linalg.det(hessian)) / phi_ll(d)
+    delta = float(np.sign(-float(normal @ hd) / h)) * np.sqrt(abs(float(d @ hd) / h))
+    return pft, complex(np.exp(-0.25j * np.pi * np.sign(h)) * np.sqrt(abs(h) / 2.0) * delta)
+
+
+def _remainder(
+    amplitude: PointFunction,
+    phase: RealPointFunction,
+    k: FloatArray,
+    hessian: FloatArray,
+    rho_b: FloatArray,
+    rho_s: FloatArray,
+    normal: FloatArray,
+    phi_ll: Callable[[FloatArray], float],
+) -> complex:
+    """S - PFT(ρ_s)·exp(-z²)/(2√π z) for |z| > 0 (see `_uniform_terms`)."""
+    pft, z = _pft_and_z(amplitude, phase, k, hessian, rho_b, rho_s, normal, phi_ll)
+    d = rho_b - rho_s
+    hd = hessian @ d
+    ll = phi_ll(d)
+    phi_b = float(phase(rho_s[None, :])[0] - rho_s @ k) + 0.5 * float(d @ hd)
+    second = (
+        complex(amplitude(rho_b[None, :])[0])
+        / (1j * float(normal @ hd))
+        * np.sqrt(2.0 * np.pi / abs(ll))
+        * np.exp(1j * (phi_b + 0.25 * np.pi * np.sign(ll)))
+    )
+    return complex(second - pft * _fresnel_tail(z))
+
+
+def _fresnel_tail(z: complex) -> complex:
+    """Leading term exp(-z²)/(2√π z) of ½·erfc(z) - step, step = 1 for Re z < 0.
+
+    Valid for |arg z| < 3π/4 (step 0) and |arg(-z)| < 3π/4 (step 1), paper section 6.1.
+    """
+    return complex(np.exp(-z * z) / (2.0 * np.sqrt(np.pi) * z))
+
+
+def _a_factor(
+    amplitude: PointFunction,
+    gradient: RealPointFunction,
+    k: FloatArray,
+    p: FloatArray,
+    normal: FloatArray,
+) -> ComplexArray:
+    """A = U (ν·∇Φ)/(i|∇Φ|²) at the points p (N, 2), the amplitude of eq. (bdw)."""
+    gp = gradient(p) - k[None, :]
+    return np.asarray(
+        amplitude(p) * (gp @ normal) / (1j * np.sum(gp * gp, axis=1)), dtype=np.complex128
+    )
+
+
+def _uniform_edge(
+    a: FloatArray,
+    t: FloatArray,
+    length: float,
+    amplitude: PointFunction,
+    phase: RealPointFunction,
+    gradient: RealPointFunction,
+    k: FloatArray,
+    hessian: FloatArray,
+    inside: bool,
+) -> tuple[complex, complex, complex]:
+    """Uniform contributions of one polygon edge a → a + length·t (quadratic phase, tᵀHt ≠ 0).
+
+    Along the edge Φ(l) is quadratic with Φ'' = tᵀHt and stationary at l_s (critical point of
+    the second kind, continued beyond the edge if necessary). The edge integral of eq. (bdw) is
+    then the 1D integral of eq. (edge_integral) between two end points, so eq. (fresnel_edge)
+    applies to each end: V = ½erfc(z_L) - ½erfc(z_0), z_e = exp(-iπ/4·sgn Φ'')·sqrt(|Φ''|/2)·
+    (l_s - l_e). With X the (finite) amplitude of the second-kind point - the shadow-uniform
+    terms from `_uniform_terms` - the contributions are V·smoothing, V·remainder and per corner
+    the bracket ±(A e^{iΦ}/(iΦ_l) - X·exp(-z_e²)/(2√π z_e)). A bracket is bounded as z_e → 0;
+    for |z_e| < _Z_MIN it is the mean of its values with l_s shifted to z_e = ±2·_Z_MIN (k
+    shifted by ±H t δl), which avoids the cancellation 1/z - 1/z.
+
+    Returns:
+        (first, second, third) contributions as in `polygon_asymptotics`.
+    """
+    slope = float(t @ hessian @ t)
+    normal = np.array([t[1], -t[0]])
+    v, smoothing, correction, brackets, z = _edge_terms(
+        a, t, normal, length, slope, amplitude, phase, gradient, k, hessian, inside
+    )
+    shift = 2.0 * _Z_MIN / np.sqrt(abs(slope) / 2.0)  # δl with |Δz_e| = 2·_Z_MIN
+    for end in (0, 1):
+        if abs(z[end]) < _Z_MIN:
+            brackets[end] = 0.5 * sum(
+                _edge_terms(
+                    a,
+                    t,
+                    normal,
+                    length,
+                    slope,
+                    amplitude,
+                    phase,
+                    gradient,
+                    k + sign * shift * (hessian @ t),
+                    hessian,
+                    inside,
+                )[3][end]
+                for sign in (-1.0, 1.0)
+            )
+    return complex(v * smoothing), complex(v * correction), complex(brackets[1] - brackets[0])
+
+
+def _edge_terms(
+    a: FloatArray,
+    t: FloatArray,
+    normal: FloatArray,
+    length: float,
+    slope: float,
+    amplitude: PointFunction,
+    phase: RealPointFunction,
+    gradient: RealPointFunction,
+    k: FloatArray,
+    hessian: FloatArray,
+    inside: bool,
+) -> tuple[complex, complex, complex, ComplexArray, ComplexArray]:
+    """(V, smoothing, remainder, corner brackets at l = 0 and L, (z_0, z_L)) of `_uniform_edge`."""
+    rho_s = np.linalg.solve(hessian, k - gradient(np.zeros((1, 2)))[0])
+    phi_l0 = float(t @ (gradient(a[None, :])[0] - k))
+    l_s = -phi_l0 / slope
+    smoothing, correction = _uniform_terms(
+        amplitude, phase, k, hessian, a + l_s * t, rho_s, normal, _constant(slope), inside
+    )
+    amplitude_x = smoothing + correction
+    scale = np.exp(-0.25j * np.pi * np.sign(slope)) * np.sqrt(abs(slope) / 2.0)
+    z = np.asarray(scale * np.array([l_s, l_s - length]), dtype=np.complex128)
+    ends = np.stack([a, a + length * t])
+    phi_l = np.array([phi_l0, phi_l0 + slope * length])
+    brackets = np.zeros(2, dtype=np.complex128)
+    for end in (0, 1):
+        if z[end] != 0.0:
+            corner = (
+                _a_factor(amplitude, gradient, k, ends[end : end + 1], normal)[0]
+                * np.exp(1j * (phase(ends[end : end + 1])[0] - ends[end] @ k))
+                / (1j * phi_l[end])
+            )
+            brackets[end] = corner - amplitude_x * _fresnel_tail(complex(z[end]))
+    v = complex(0.5 * (erfc(z[1]) - erfc(z[0])))
+    return v, smoothing, correction, brackets, z
+
+
 def polygon_asymptotics(
     vertices: FloatArray,
     amplitude: PointFunction,
@@ -148,6 +357,7 @@ def polygon_asymptotics(
     gradient: RealPointFunction,
     hessian: FloatArray,
     k: FloatArray,
+    uniform: bool = False,
 ) -> tuple[complex, complex, complex]:
     """Asymptotic contributions to ∬_Ω U exp(iΦ) d²ρ for a polygon and a quadratic phase.
 
@@ -161,13 +371,22 @@ def polygon_asymptotics(
          third kind: sum over edges of [A·exp(iΦ)/(iΦ_l)] between the end points),
         with A = U (ν·∇Φ)/(i|∇Φ|²). Contributions of the second kind are relative order k^(-1/2),
         of the third kind k^(-1).
+
+        With `uniform=True` the first two terms stay finite on the shadow boundary of an edge
+        (`_uniform_terms`): the first term becomes the PFT term of the (possibly outside)
+        stationary point times the indicator smoothed by ½·erfc across every edge with a
+        critical point of the second kind, the second the remainder of those points. Far from
+        all shadow boundaries the sum agrees with the non-uniform result asymptotically. Corner
+        transitions (a critical point of the second kind passing a vertex) stay non-uniform.
     """
     v = np.asarray(vertices, dtype=np.float64)
     h = np.asarray(hessian, dtype=np.float64)
     # interior stationary point: ∇ψ(ρ) = k, solved with one Newton step from the origin
     g0 = gradient(np.zeros((1, 2)))[0]
     rho_s = np.linalg.solve(h, k - g0)
-    first = _stationary_area_term(rho_s, amplitude, phase, h, k) if _inside(v, rho_s) else 0j
+    pft = _stationary_area_term(rho_s, amplitude, phase, h, k)
+    inside = _inside(v, rho_s)
+    first = pft if inside else 0j
 
     def a_factor(p: FloatArray, normal: FloatArray) -> ComplexArray:
         gp = gradient(p) - k[None, :]
@@ -187,7 +406,14 @@ def polygon_asymptotics(
         phi_l0 = float(t @ (gradient(a[None, :])[0] - k))
         ends = np.stack([a, b])
         phi_l_ends = np.array([phi_l0, phi_l0 + slope * length])
-        terms = a_factor(ends, normal) * np.exp(1j * (phase(ends) - ends @ k)) / (1j * phi_l_ends)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            terms = (
+                a_factor(ends, normal) * np.exp(1j * (phase(ends) - ends @ k)) / (1j * phi_l_ends)
+            )
+        if uniform and slope != 0.0:
+            s1, s2, s3 = _uniform_edge(a, t, length, amplitude, phase, gradient, k, h, inside)
+            first, second, third = first + s1, second + s2, third + s3
+            continue
         third += complex(terms[1] - terms[0])
         if slope != 0.0:
             l_s = -phi_l0 / slope
@@ -208,10 +434,14 @@ def circle_asymptotics(
     gradient: RealPointFunction,
     hessian: FloatArray,
     k: FloatArray,
+    uniform: bool = False,
 ) -> tuple[complex, complex]:
     """Asymptotic contributions for the disc |ρ| ≤ radius and a quadratic phase (constant H).
 
     Second-kind points satisfy t·∇Φ = 0 on the circle; there Φ_ll = tᵀHt - (ν·∇Φ)/R.
+
+    With `uniform=True` the terms stay finite on the shadow boundary, as in
+    `polygon_asymptotics`.
 
     Returns:
         (first kind: PFT term or 0, second kind: sum over the critical points of the boundary).
@@ -219,11 +449,9 @@ def circle_asymptotics(
     h = np.asarray(hessian, dtype=np.float64)
     g0 = gradient(np.zeros((1, 2)))[0]
     rho_s = np.linalg.solve(h, k - g0)
-    first = (
-        _stationary_area_term(rho_s, amplitude, phase, h, k)
-        if float(rho_s @ rho_s) < radius * radius
-        else 0j
-    )
+    pft = _stationary_area_term(rho_s, amplitude, phase, h, k)
+    inside = float(rho_s @ rho_s) < radius * radius
+    first = pft if inside else 0j
 
     def tangential(theta: float) -> float:
         p = radius * np.array([[np.cos(theta), np.sin(theta)]])
@@ -240,6 +468,13 @@ def circle_asymptotics(
         p = (radius * nu)[None, :]
         gp = gradient(p)[0] - k
         phi_ll = float(t @ h @ t - (nu @ gp) / radius)
+        if uniform:
+            smoothing, correction = _uniform_terms(
+                amplitude, phase, k, h, p[0], rho_s, nu, _circle_phi_ll(h, t, nu, radius), inside
+            )
+            first += smoothing
+            second += correction
+            continue
         a = amplitude(p)[0] * (nu @ gp) / (1j * (gp @ gp))
         second += complex(
             a
@@ -247,6 +482,26 @@ def circle_asymptotics(
             * np.exp(1j * (phase(p)[0] - p[0] @ k + 0.25 * np.pi * np.sign(phi_ll)))
         )
     return first, second
+
+
+def _constant(value: float) -> Callable[[FloatArray], float]:
+    """Φ_ll of a straight edge: tᵀHt, independent of d."""
+
+    def phi_ll(d: FloatArray) -> float:
+        return value
+
+    return phi_ll
+
+
+def _circle_phi_ll(
+    h: FloatArray, t: FloatArray, nu: FloatArray, radius: float
+) -> Callable[[FloatArray], float]:
+    """Φ_ll = tᵀHt - ν·∇Φ/R on the circle with ∇Φ = H·d, d = ρ_b - ρ_s (1/mm²)."""
+
+    def phi_ll(d: FloatArray) -> float:
+        return float(t @ h @ t - (nu @ h @ d) / radius)
+
+    return phi_ll
 
 
 def _inside(vertices: FloatArray, point: FloatArray) -> bool:

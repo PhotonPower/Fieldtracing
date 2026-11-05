@@ -53,3 +53,4 @@ Raytatouilles `load_json` kennt diesen Typ noch nicht; er ist Teil des ADR-Entwu
 | `lpia_sphere_about_focus` | `lpia.trace_surface`, `interface_amplitude` | \|t\|·r₁/r₂, 10⁻¹² |
 | `field_operator_plate` | `rtt_bridge.field_operator` (ADR 0004) | √s·T₂T₁, 10⁻¹⁴ |
 | `selection_rules` | `selection.select_method` | Entscheidungstabelle (exakt) |
+| `edge_uniform_rectangle` | `edge.polygon_asymptotics(uniform=True)` | Fresnel-Integrale, 5·10⁻⁴ |

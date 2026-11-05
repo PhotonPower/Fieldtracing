@@ -371,6 +371,9 @@ Kreise, kritische Punkte 2. und 3. Art.
 
 - Fieldtracing T5 (`test_edge.py`) und #5 (`test_edge_2d.py`): Kreisscheibe gegen
   Hankel-Quadratur < 1e−12 (Randintegral), Ordnungen k^(−½) bzw. k^(−1).
+- Gleichmäßige Lösung an Schattengrenzen und Eckübergängen (Gl. fresnel_edge_2d,
+  `test_edge_uniform.py`, Sollwertdatei `edge_uniform_rectangle`): Fehler O(1/k) über den
+  Übergang hinweg.
 
 ## Abnahmekriterien
 
@@ -379,7 +382,8 @@ Kreise, kritische Punkte 2. und 3. Art.
 
 ## Nicht Teil dieser Aufgabe
 
-Gleichmäßige Lösung nahe der Schattengrenze in 2D (in Fieldtracing offen).
+Doppelter Übergang (stationärer Punkt auf einer Ecke), in Fieldtracing ebenfalls nicht
+gleichmäßig.
 
 ---
 

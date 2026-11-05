@@ -15,8 +15,10 @@ from dataclasses import replace
 from typing import Any
 
 import numpy as np
+from scipy.special import erfc
 
 from fieldtracing._types import ComplexArray, FloatArray
+from fieldtracing.edge import polygon_asymptotics
 from fieldtracing.field import GridlessField
 from fieldtracing.focus import airy_integral, debye_focus, richards_wolf
 from fieldtracing.fourier import centered_grid, frequency_step, ft
@@ -382,6 +384,61 @@ def selection_rules() -> dict[str, Any]:
     )
 
 
+def edge_uniform_rectangle() -> dict[str, Any]:
+    a, b, cx, cy = 0.5, 0.3, 2000.0, -1500.0
+    vertices = np.array([[-a, -b], [a, -b], [a, b], [-a, b]])
+    ky_rel = np.array([0.9, 0.95, 1.05, 1.1])
+    k = np.stack([0.5 * cx * a * np.ones_like(ky_rel), ky_rel * cy * b], axis=1)
+
+    def ones(p: FloatArray) -> ComplexArray:
+        return np.ones(len(p), dtype=np.complex128)
+
+    def phase(p: FloatArray) -> FloatArray:
+        return np.asarray(0.5 * (cx * p[:, 0] ** 2 + cy * p[:, 1] ** 2))
+
+    def gradient(p: FloatArray) -> FloatArray:
+        return np.asarray(p * np.array([cx, cy]))
+
+    def slit(c: float, half: float, q: float) -> complex:
+        # ∫_{-half}^{half} exp(i c x²/2 - i q x) dx (Fresnel integrals in closed form)
+        sg = np.sign(c)
+
+        def primitive(x: float) -> complex:
+            arg = -np.exp(-0.25j * np.pi * sg) * np.sqrt(abs(c) / 2) * (x - q / c)
+            return complex(
+                np.sqrt(2 * np.pi / abs(c)) * np.exp(0.25j * np.pi * sg) * 0.5 * erfc(arg)
+            )
+
+        return complex(np.exp(-0.5j * q * q / c) * (primitive(half) - primitive(-half)))
+
+    terms = np.array(
+        [
+            polygon_asymptotics(
+                vertices, ones, phase, gradient, np.diag([cx, cy]), kk, uniform=True
+            )
+            for kk in k
+        ]
+    )
+    closed = np.array([slit(cx, a, float(kk[0])) * slit(cy, b, float(kk[1])) for kk in k])
+    return field_reference(
+        "edge_uniform_rectangle",
+        "Uniform asymptotics of ∬ exp(iΦ) over a rectangle across the shadow boundary of an edge.",
+        "tests/test_edge_uniform.py; paper eq. fresnel_edge, bdw",
+        {"half_widths_mm": [a, b], "note": "U = 1, ψ = (c_x x² + c_y y²)/2; sum of the terms"},
+        {"vertices_mm": vertices, "hessian_per_mm2": np.diag([cx, cy]), "k_per_mm": k},
+        {
+            "first": terms[:, 0],
+            "second": terms[:, 1],
+            "third": terms[:, 2],
+            "integral": terms.sum(axis=1),
+        },
+        # the second-kind remainder vanishes here up to rounding: absolute tolerance
+        {"rel": 1e-10, "abs": 1e-12 * float(np.max(np.abs(closed)))},
+        {"integral": closed},
+        {"rel": 5e-4},
+    )
+
+
 CASES: dict[str, Callable[[], dict[str, Any]]] = {
     f.__name__: f
     for f in (
@@ -397,5 +454,6 @@ CASES: dict[str, Callable[[], dict[str, Any]]] = {
         lpia_sphere_about_focus,
         field_operator_plate,
         selection_rules,
+        edge_uniform_rectangle,
     )
 }
