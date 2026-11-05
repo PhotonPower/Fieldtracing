@@ -3,15 +3,18 @@
 > **Entwurf** (2026-11-05) zur Abstimmung mit dem Maintainer. Nichts davon ist in Raytatouille
 > angelegt (Fieldtracing, AGENTS.md Regel 8); Entscheidungen fallen dort nach dessen Prozess.
 > Stand Raytatouille: Commit `6078e55` (nach 0.9.0, M8 offen), gelesen am 2026-11-05.
+> Inventar der Module (Abschnitt 2.1) aus den Repositories des Maintainers, gelesen am 2026-11-05.
 
 ## 1. Ziel
 
 Raytatouille soll nach v1.0 optische Systeme rechnen können, in denen geometrische Optik,
 Field Tracing und rigorose Wellenoptik zusammenwirken. Vorgesehene Module: sequenzielles und
-später nicht-sequenzielles Raytracing (vorhanden bzw. M9), Field Tracing (`rtt-field`), ein
-vektorielles BPM, RCWA für periodische Strukturen, BEM für kleine Partikel, FEM für allgemeine
-Nahfeldprobleme und ein bio-optisches Modul. Mehrere davon liegen bereits als headless Programme
-mit Python-Anbindung vor.
+später nicht-sequenzielles Raytracing (vorhanden bzw. M9), Field Tracing (`rtt-field`), eine
+schnelle bidirektionale vektorielle Wellenpropagation (BWPM, geplant), Fourier-Modal-Methode und
+RCWA für periodische Strukturen (FourierGrating), BEM für Partikel und raue Flächen (CliffordBem,
+SpeckleBem), hp-FEM für allgemeine Nahfeldprobleme und die Molekulardynamik BioOptoMD, die
+optische Parameter biologischer Sensorschichten liefert. Bis auf die BWPM liegen alle als headless
+Programme mit Python-Anbindung unter MIT-Lizenz vor (Abschnitt 2.1).
 
 Daraus folgen drei Aufgaben, die dieser Plan nacheinander und mit Abhängigkeiten beschreibt:
 
@@ -50,16 +53,75 @@ ihre *Kopplung*. Der Plan hält daran fest: Löser bleiben außerhalb, der Kern 
 Darstellungen, Umwandlungen, Schnittstelle und Planer. Das ändert trotzdem die Scope-Aussage in
 `architecture.md` und braucht dort ein ADR (Abschnitt 9, Entscheidung D1).
 
+### 2.1 Inventar der Module
+
+Gelesen am 2026-11-05 (Repositories unter `PhotonPower`, alle MIT, nur lesend).
+
+| Modul | Verfahren | Stand | Sprache, Anbindung | GPU |
+| --- | --- | --- | --- | --- |
+| **FourierGrating** | Fourier-Modal-Methode: Differentialmethode (implizites RK, S-Matrix) und RCWA, schnelle Fourierfaktorisierung; 1D/2D, isotrop/anisotrop, Nahfeld | v0.12, M0–M13 umgesetzt | C++, Python `fouriergrating` (pybind11, Wheels), CLI `fgsolve`, JSON-Konfiguration | CUDA (cuBLAS/cuSOLVER), Abnahme auf dem Server offen |
+| **hp-FEM** | Maxwell zeitharmonisch, Nédélec-Elemente hoher Ordnung, a-posteriori-Fehler, hp-Adaptivität, PML; Streuung, Eigenmoden, Wellenleiter, periodisch (Bloch), geschichteter Hintergrund, Dipole, Formableitungen, Optimierung/UQ | 0.2.0, M0–M9 | C++20, Python `hpfem` (pybind11), JSON-Projekte | cuDSS als optionaler Direktlöser |
+| **CliffordBem** | BEM in Cl₃(ℂ) (Dirac-Form, resonanzfreie Transmissionsgleichung), H-Matrix/ACA; Partikel, mehrere Körper, beschichtete und chirale Medien, Dipole, Nahfeld, Kräfte | 0.63 | C++, Python `cliffordbem` (pybind11) | – |
+| **SpeckleBem** | Oberflächen-Integralgleichungen (PMCHWT u. a.), RWG, MLFMM; raue Flächen und beliebige Körper, Speckle-Statistik | Phase 4 (MLFMM) weit fortgeschritten, Python-API für Simulation und Felder | C++20, Python `specklebem` (pybind11), `.npy`/HDF5 | geplant (Phase 7) |
+| **BioOptoMD** | Molekulardynamik von Biorezeptoren an Sensoroberflächen, Optik-Observer: Übergangsdipole, FRET-Geometrie, Brechzahlprofil n(z) (Lorentz-Lorenz) | Phase 9.3 abgenommen | C++/CUDA, Python `biooptomd` (nanobind, DLPack) | nur GPU |
+| **BWPM** (geplant) | schnelle bidirektionale vektorielle Wellenpropagation nach Wende et al. 2023 auf Basis der FPWPM | – | – | vorgesehen |
+
+**Konventionen** – der wichtigste Befund, denn hier entstehen die teuersten Kopplungsfehler:
+
+| Modul | Zeitfaktor | Einheiten | Geometrie und Polarisation | Anpassung im Adapter |
+| --- | --- | --- | --- | --- |
+| Raytatouille / `rtt-field` | e^(−iωt) (Wellen exp(i(k·r − ωt))) | mm, µm, rad | +z Ausbreitung; s = k × N, Fresnel Convention A | Referenz |
+| FourierGrating | e^(−iωt) | intern k₀-normiert, API µm und Grad | Schichtung in **y**, Licht von oben (−y); δ = 0 s/TE; Amplituden tangentiales E mit lokalem Phasenbezug je Grenzfläche | Koordinatendrehung y ↔ z, Phasenbezug auf die Port-Ebene, s/p-Basis |
+| hp-FEM | e^(−iωt), Im ε > 0 | SI (m), Python mit `units` | frei; Streufeld- oder Gesamtfeldformulierung | nur Einheiten |
+| CliffordBem | e^(−iωt) | freie Längeneinheit L, ε₀ = μ₀ = 1 | frei; Strahlen auf Leistung 1 normiert | Einheiten, absolute Leistung |
+| SpeckleBem | **e^(+jωt)**, Im ε ≤ 0 | SI (m) | Licht aus z < 0 in +z; p in xz-Ebene, s entlang y | **komplex konjugieren** (Felder, Materialien), Basis |
+| BioOptoMD | – (keine Wellenoptik) | nm, ps, kJ/mol, e·nm | Sensoroberfläche bei z, n(z)-Profil | Einheiten; nur Datenkopplung |
+
+**Ein- und Ausgänge**, soweit für Ports relevant:
+
+- FourierGrating: Einfall ebene Welle (λ, Polar- und Azimutwinkel, Polarisation); Ausgabe je
+  Ordnung Effizienz und Amplituden s/p, Energiebilanz, Nahfeld. `Simulation.solve` ändert nur die
+  Einfallsrichtung ohne Neuaufbau, gibt den GIL frei – Tabellen über k∥ sind damit billig.
+- hp-FEM: Quellen ebene Welle, Dipol, frei definierte Felder (Callback, langsam); Ausgabe
+  Feld, Beugungsordnungen periodischer Strukturen mit abgezogenem Einfall, Leistungsbilanz.
+- CliffordBem: `BeamField` ist bereits ein **Winkelspektrum ebener Wellen** (Richtung, Amplitude,
+  Raumwinkelgewicht), aber nur über `focused` (Richards-Wolf) und `gaussian` erzeugbar und auf
+  Leistung 1 normiert; Ausgabe Fernfeld, Nahfeld, Extinktion, Kräfte, Emitterraten.
+- SpeckleBem: `AngularSpectrumBeam` (rigoros, bisher nur Gaußspektrum), Gauß, ebene Welle;
+  Ausgabe Nah- und Fernfeld, RCS/DRC, Speckle-Statistik.
+- BioOptoMD: keine Lichtports, sondern **Strukturdaten**: n(z) mit Varianz über Frames,
+  Dipolorte und -richtungen, FRET-Größen.
+
+**Folgerungen für den Plan:**
+
+1. Das **Ebene-Wellen-Spektrum** ist die gemeinsame Sprache: CliffordBem und SpeckleBem nehmen
+   Winkelspektren, FourierGrating und hp-FEM ebene Wellen je Einfallsrichtung, und `rtt-field`
+   erzeugt Spektren mit PFT/FFT. Kugelwellen (T-Matrix) braucht zunächst niemand.
+2. Kleine Erweiterungen in zwei Modulen sind nötig: ein Konstruktor `BeamField` aus beliebigen
+   Stützstellen mit absoluter Leistung (CliffordBem) und ein `AngularSpectrumBeam` mit beliebigem
+   Spektrum (SpeckleBem). Diese Repositories sind für dieses Projekt nur lesbar; die Erweiterungen
+   werden dort als Issues vorgeschlagen (Entscheidung D12).
+3. BioOptoMD ist kein Lichtlöser, sondern eine **Struktur- und Quellenquelle**: n(z) wird zur
+   Schicht in Raytatouilles Coatings, in FourierGrating oder als Dünnschicht in CliffordBem; die
+   Dipole werden zu Emittern in CliffordBem und hp-FEM. Der Plan bekommt dafür eine eigene,
+   einseitige Datenkopplung (6.2). Ein inkohärentes Strahlungstransport-Modul gibt es nicht; die
+   radiometrische Darstellung bleibt für M9 (Streuung, SpeckleBem-BSDF).
+4. Alle Löser außer Raytatouille rechnen auf der GPU oder können es. Das stützt die Ausführung als
+   Unterprozess (D3) und lässt den Kern von Raytatouille ohne GPU (ADR 0013).
+5. Die BWPM fehlt noch und ist zugleich das Verfahren, das am direktesten an `rtt-field` anschließt
+   (Gitterfeld in einer Ebene, beide Richtungen). Sie wird als erstes „fusionsfähiges“ Modul von
+   Anfang an mit den Konventionen und Ports von Raytatouille gebaut (Abschnitt 6.6).
+
 ## 3. Phasen im Überblick
 
 | Phase | Inhalt | Ort | Voraussetzung | Abnahme |
 | --- | --- | --- | --- | --- |
 | **P0 Vorbereitung** | Inventar der Löser, ADR-Entwurf „Fusion“, Konformitätsprüfung, Prototyp-Repository, Pilotfälle | Fieldtracing / neues Repo | – (jetzt, parallel zu M8) | Entwürfe freigegeben |
 | **P1 Port `rtt-field`** | I1 Vektor-Debye-PSF aus Strahlen, I2 Felder in Ebenen, I3 hybride Feldverfolgung | Raytatouille | v1.0, #285 entschieden | Sollwertdateien grün |
-| **P2 Blackbox-Prototyp** | Schnittstelle, zwei Pilotlöser, Darstellungen, Umwandlungen, Pilotfälle in Python | Prototyp-Repo | P0; P1 nur für den Strahl-Feld-Teil | Pilotfälle gegen unabhängige Referenz |
+| **P2 Blackbox-Prototyp** | Schnittstelle, Pilotlöser FourierGrating und CliffordBem, Darstellungen, Umwandlungen, Pilotfälle K1–K3 in Python; parallel BWPM B0–B3 | Prototyp-Repo | P0; P1 nur für den Strahl-Feld-Teil | Pilotfälle gegen unabhängige Referenz |
 | **P3 Kern der Fusion** | Darstellungen und Ports in C++, Gebiete im Modell, Tabellenkopplung im Tracer, Ausführung und Cache | Raytatouille | P1, P2, ADR Fusion | Pilotfälle aus P2 bitgleich bzw. in Toleranz |
 | **P4 Pfadplanung** | Topologie, Darstellungswahl, Abtastung, Fehlerbudget, Kohärenz; Abstimmung mit M9 | Raytatouille | P3; M9-Entwurf | Entscheidungstabellen, End-to-End gegen Brute-Force |
-| **P5 Ausbau** | weitere Löser, GPU, Optimierung durch gekoppelte Systeme, GUI | Raytatouille und Adapter | P4 | je Modul eigene Abnahme |
+| **P5 Ausbau** | BWPM (B4, K4), BioOptoMD (K5), SpeckleBem mit M9 (K6), GPU, Optimierung durch gekoppelte Systeme, GUI | Raytatouille und Adapter | P4 | je Modul eigene Abnahme |
 
 P0 kann sofort beginnen. P1 und P2 laufen nach v1.0 parallel, weil P2 nur für den
 Strahl-Feld-Übergang auf P1 wartet und sich bis dahin mit der Python-Referenz aus Fieldtracing
@@ -68,15 +130,11 @@ mit unabhängigen Referenzen und Sollwertdateien, dann Port.
 
 ## 4. Phase P0: Vorbereitung (jetzt bis v1.0)
 
-1. **Inventar der Löser.** Für jedes vorhandene Programm (BPM, RCWA, BEM, FEM, bio-optisch) eine
-   Zeile mit: Verfahren und Gültigkeitsbereich, Sprache, Lizenz, Python-Anbindung, Ein- und
-   Ausgabedarstellungen, Zeit- und Fourier-Konvention, Polarisationsbasis, Einheiten, Linearität,
-   Determinismus, GPU, typische Laufzeit und Speicher, vorhandene Validierung. Vorlage in Anhang A.
-   Das Inventar entscheidet, welche Darstellungen der Kern braucht.
-2. **Pilotfälle auswählen** (Abschnitt 8). Zwei Löser für P2, Vorschlag: **RCWA** (einfachste
-   Ports: ebene Wellen und Beugungsordnungen, direkter Nutzen im sequenziellen Tracer) und
-   **BEM** (geschlossene Oberfläche, fokussiertes Vektorfeld aus `rtt-field` als Einfall, Mie als
-   Referenz). BPM folgt in P5, weil es die Feldkopplung über ausgedehnte Gitter braucht.
+1. **Inventar der Löser** – erledigt (Abschnitt 2.1). Offen sind dort Laufzeit und Speicher je
+   Pilotfall und die Determinismus-Angaben der GPU-Pfade.
+2. **Pilotfälle** (Abschnitt 8): FourierGrating (K1, K2) und CliffordBem (K3) für P2, weil beide
+   reif, validiert und ohne Änderung der Konvention (e^(−iωt)) koppelbar sind. Die BWPM wird
+   parallel als neues Modul entwickelt (6.6) und ist der Pilot der Feldkopplung (K4).
 3. **ADR-Entwurf „Fusion“** (Abschnitt 9): Scope, Darstellungen, Schnittstelle, Ausführung,
    Modell, Planer, Kohärenz, Determinismus.
 4. **Konformitätsprüfung** für Löser spezifizieren (Abschnitt 6.5), bevor ein Adapter entsteht.
@@ -134,10 +192,14 @@ ihnen ist ein geprüfter Operator. Neue Darstellungen brauchen ein ADR.
 | **G Gitterfeld** | `GriddedField`: Werte ∈ ℂ³ auf Gitter mit analytischer Trägerphase | kohärent | `rtt-field` |
 | **S Ebene-Wellen-Spektrum** | diskrete Liste (k∥, Amplitude ∈ ℂ², Basis s/p) oder Gitterspektrum; für periodische Ports Floquet-Ordnungen | kohärent | neu |
 | **M Streumatrix / Tabelle** | linearer Operator eines Gebiets: S-Matrix in Ordnungen, Jones- oder Mueller-Tabelle über (Einfallsrichtung, λ), T-Matrix in Kugelwellen | kohärent (Jones, S, T) bzw. inkohärent (Mueller) | neu, Tabellen in X2 vorgesehen |
-| **P radiometrisch** | Strahlen oder Gitter mit Stokes-Vektor bzw. Strahldichte, ohne Phase | inkohärent | neu (bio-optisch, M9-Streuung) |
+| **P radiometrisch** | Strahlen oder Gitter mit Stokes-Vektor bzw. Strahldichte, ohne Phase | inkohärent | neu, erst mit M9 (Streumodelle, SpeckleBem-BSDF) |
+| **Q Quellen** | Dipol-Emitter: Ort, elektrisches/magnetisches Moment, Wellenlänge; Ensembles | inkohärent über Emitter, kohärent je Emitter | neu (BioOptoMD → CliffordBem, hp-FEM) |
+| **N Struktur** | Brechzahlprofil n(z) bzw. Schichtstapel, mit Streuung über Frames | – (Daten, kein Licht) | neu (BioOptoMD → Coatings, FourierGrating, CliffordBem) |
 
-Kugelwellen (T-Matrix) sind die natürliche Darstellung für BEM und FEM an Partikeln; sie kommen
-erst mit dem BEM-Pilot und nur als Inhalt von M, nicht als allgemeiner Port.
+Q und N sind **Datenports**: Sie verbinden kein Licht, sondern liefern Quellen und Strukturen
+einseitig an ein Gebiet. Der Planer behandelt sie als Abhängigkeiten im Ausführungs-DAG, nicht als
+Pfadabschnitte. Kugelwellen (T-Matrix) braucht nach dem Inventar zunächst kein Modul, weil beide
+BEM-Codes Winkelspektren als Einfall nehmen; sie bleiben ein späterer Inhalt von M.
 
 ### 6.3 Umwandlungen
 
@@ -149,7 +211,9 @@ erst mit dem BEM-Pilot und nur als Inhalt von M, nicht als allgemeiner Port.
 | G ↔ S | FFT, SFT, PFT | Tabelle 7.1 des Papers | `rtt-field` |
 | S → R | eine Strahlfamilie je Ordnung bzw. Spektralbereich | Ordnungen getrennt, Bündel groß gegen λ | neu |
 | S ↔ M | Anwenden der Matrix auf Ein-Ordnungen; Tabellen über k∥ interpolieren (nur glatte Größen, analog ADR 0003) | Tabelle fein genug, keine Resonanzen zwischen Stützstellen | neu |
-| H/G → Kugelwellen | Projektion des einfallenden Felds (Vektor-Kugelfunktionen) | Feld im Hüllkörper bekannt | neu (BEM-Pilot) |
+| H/G → S für BEM | Winkelspektrum des Einfalls um den Streukörper (PFT bzw. FFT, dann Stützstellen auf der Richtungskugel) | Spektrum vollständig erfasst (Apertur, Evaneszenz vernachlässigbar) | `rtt-field` + Adapter (CliffordBem `BeamField`, SpeckleBem `AngularSpectrumBeam`) |
+| Fernfeld → S → H | Fernfeld E∞(k̂) eines Streuers als Spektrum, dann inverse PFT bzw. Strahlen | Abstand ≫ Streuergröße²/λ oder Nahfeldkorrektur | neu |
+| N → Struktur | n(z) als Schichtfolge (Diskretisierung, Mittel und Varianz) | Schichtdicke ≪ λ/n oder Profil-RK in FourierGrating | neu |
 | R ↔ P | Gewicht und Stokes aus P; Rückweg ohne Phase | nur inkohärente Weiterrechnung | neu |
 
 Jeder Operator bekommt eine Sollwertdatei mit unabhängiger Referenz und, bei Näherungen, einen
@@ -205,6 +269,39 @@ rechnen mit exp(−i(k·r − ωt)) oder anderen Polarisationsbasen):
 Die Konventionsanpassung (Vorzeichen, Basiswechsel, Einheiten) geschieht nur im Adapter, nie im
 Kern.
 
+### 6.6 BWPM als erstes fusionsfähiges Modul
+
+Grundlage: M. Wende, J. Drozella, A. M. Herkommer, „Fast bidirectional vector wave propagation
+method …“, Opt. Express 31(18), 28874 (2023), doi:10.1364/OE.497244, und die dort zugrunde gelegte
+FPWPM (ebd. Ref. 7). Das Verfahren propagiert die Querkomponenten des elektrischen Felds
+schrittweise längs z mit FFT, zerlegt die Brechzahlverteilung je Schritt in M diskrete Werte
+(Gewichtsfunktion I_r,s) und wendet in der Frequenzdarstellung Transmissions- und
+Reflexionsmatrizen T, R an; vor- und rücklaufende Felder werden in Iterationen hin und zurück
+überlagert. Der Aufwand je Schritt ist O(M² N log N); das Paper speichert die reflektierten Felder
+im ganzen Volumen und rechnet deshalb in 2D.
+
+Warum die BWPM in der Fusion besonders gut passt:
+
+- Ihre Ports sind **Gitterfelder in Ebenen senkrecht zu z, in beiden Richtungen** – genau die
+  Darstellung G von `rtt-field`; die Kopplung braucht nur Umtasten und das Abspalten der
+  Trägerphase, keine neue Darstellung.
+- Sie schließt die Lücke zwischen Field Tracing (glatte Felder, große Systeme) und den rigorosen
+  Lösern (kleine Volumina): 3D-gedruckte Mikrooptik, Faserfacetten, Rückreflexe.
+- Sie kann von Beginn an mit den Konventionen von Raytatouille gebaut werden (Zeitfaktor, Fresnel
+  Convention A, s/p-Basis, leistungsnormierte Ports), statt sie nachträglich anzupassen.
+
+Vorgehen in eigenem Repository (Vorschlag `PhotonPower/BWPM`, MIT), mit den Regeln von
+Fieldtracing:
+
+| Stufe | Inhalt | Referenz und Abnahme |
+| --- | --- | --- |
+| B0 | Spezifikation: Formeln der FPWPM und BWPM mit Herleitung im Volltext geprüft, Konventionsabgleich mit Raytatouille (insbesondere Vorzeichen der Reflexionsmatrix gegen Convention A) | Dokument, Freigabe |
+| B1 | Python-Prototyp der FPWPM in 2D, aufbauend auf den Fieldtracing-Bausteinen (Winkelspektrum, Fresnel-Operator) | homogenes Medium = Winkelspektrum exakt; Grenzfläche = Fresnel; Konvergenz in dz |
+| B2 | BWPM in 2D, Iterationen | Platte schräg beleuchtet gegen Airy-Formel, TE und TM, Energie R + T = 1; Konvergenz über die Iterationen wie im Paper (Abschnitt 2.1.3) |
+| B3 | 3D mit Speicherung der Reflexe nur an Grenzflächen (im Paper als Ausblick genannt) | 3D-Platte und Linse; Speicher und Laufzeit gemessen, Ziel: Rechner des Maintainers (1 TB, RTX 6000 Ada) |
+| B4 | C++/CUDA-Kern mit Python-Anbindung, Adapter nach 6.4, Konformitätstests nach 6.5 | Sollwerte aus B1–B3 bitgleich bzw. in Toleranz |
+| B5 | Fusionspilot K4 (Abschnitt 8) | Werte aus dem Paper als Plausibilität, Platte und Fresnel als Referenz |
+
 ## 7. Pfadplanung
 
 ### 7.1 Fusionspfade
@@ -252,8 +349,10 @@ Regeln, die der Plan festhält und die Ausgabe dokumentiert:
   der Kohärenzlänge. Über Gruppen hinweg addieren sich Intensitäten bzw. Stokes-Vektoren.
 - Zwei Pfade, die in denselben Ausgangsport münden, werden nur kohärent überlagert, wenn beide in
   einer kohärenten Darstellung ankommen; sonst warnt der Planer.
-- Das bio-optische Modul ist voraussichtlich inkohärent (Strahlungstransport); seine Ports sind
-  radiometrisch (P), und der Planer schaltet hinter ihm auf inkohärente Weiterrechnung um.
+- Emitter-Ensembles aus BioOptoMD (Q) strahlen untereinander inkohärent: Je Emitter wird kohärent
+  gerechnet, über Emitter und Orientierungen werden Intensitäten gemittelt. Streuung an rauen
+  Flächen (SpeckleBem) liefert kohärente Speckle-Felder je Realisierung; erst die Mittelung über
+  Realisierungen ergibt eine radiometrische Größe (P, BSDF) für M9.
 
 ### 7.4 Beziehung zu M9
 
@@ -269,16 +368,17 @@ M9-ADR (Entscheidung D6).
 Jeder Fall prüft eine Kopplungsart gegen eine Referenz, die nicht aus den gekoppelten Teilen
 stammt.
 
-| Nr. | Fall | Kopplung | Referenz | Phase |
-| --- | --- | --- | --- | --- |
-| K1 | Gitterspektrometer mit RCWA-Effizienzen je Ordnung und Polarisation | Tabelle (M) als Interaktion im sequenziellen Tracer | Gittergleichung und dünnes Gitter; Energie über die Ordnungen | P2/P3 |
-| K2 | Metafläche bzw. DOE als Linse, RCWA-Tabelle über k∥ | Tabelle mit Phase im Feldpfad (H) | Fokus gegen Richards-Wolf bei idealer Phase | P2/P3 |
-| K3 | Partikel im Fokus: Mikroskopobjektiv → fokussiertes Vektorfeld → BEM-Streuung → Rückweg durch das Objektiv | Feld (H/G) → Kugelwellen → S → R/H | Mie für die Kugel; Fokusfeld gegen Richards-Wolf | P2/P3 |
-| K4 | Faser- bzw. Wellenleiterkopplung mit vektoriellem BPM | G → BPM → G, Überlapp mit Moden | Gaußmodus im Parabolprofil, Winkelspektrum im homogenen Teil | P5 |
-| K5 | Gewebeprobe mit bio-optischem Modul, Abbildung des Streulichts | R → P → R (inkohärent) | Energiebilanz; Grenzfall ohne Streuung = reines Raytracing | P5 |
-| K6 | Brute-Force-Vergleich eines kleinen Gesamtsystems (2D oder kleine Apertur) | gesamte Kette | ein einziger rigoroser Lauf (FEM bzw. FDTD) über alles | P4 |
+| Nr. | Fall | Module | Kopplung | Referenz | Phase |
+| --- | --- | --- | --- | --- | --- |
+| K1 | Gitterspektrometer mit Effizienzen je Ordnung und Polarisation | Raytatouille + FourierGrating | Tabelle (M) als Interaktion im sequenziellen Tracer | Gittergleichung, dünnes Gitter; Energie über die Ordnungen | P2/P3 |
+| K2 | Metafläche bzw. DOE als Linse, Tabelle über k∥ | `rtt-field` + FourierGrating | Tabelle mit Phase im Feldpfad (H) | Fokus gegen Richards-Wolf bei idealer Phase | P2/P3 |
+| K3 | Partikel im Fokus eines Objektivs, Rückweg durch das Objektiv | Raytatouille + `rtt-field` + CliffordBem | R → H → S (`BeamField`) → Fernfeld → S → H/R | Mie (CliffordBem dagegen validiert); Fokusfeld gegen Richards-Wolf und `BeamField.focused` | P2/P3 |
+| K4 | Bildleiter mit 3D-gedruckter Index-Matching-Kappe: Objektiv → Fokus → Facette mit Rückreflex → Objektiv → Lochblende | Raytatouille + `rtt-field` + BWPM | R → H → G → BWPM → G (rücklaufend) → H → R | Platte und Fresnel exakt; Werte aus Wende et al. 2023 (Fokusversatz, Rückreflex, Strehl) als Plausibilität | P5 (nach B4) |
+| K5 | Biosensor: Rezeptorschicht aus BioOptoMD, Fluorophore als Emitter, Abbildung durch ein Objektiv | BioOptoMD + CliffordBem bzw. hp-FEM + `rtt-field` + Raytatouille | N → Schicht, Q → Emitter, Fernfeld → S → H → R | Emitterrate gegen Reihenlösung (in CliffordBem validiert); ohne Schicht = freier Dipol | P5 |
+| K6 | Raue Fläche als Streuer in einem Abbildungssystem | Raytatouille (M9) + SpeckleBem | S → SpeckleBem → Fernfeld/BSDF → P bzw. R | Fresnel für glatte Fläche (in SpeckleBem validiert), Energiebilanz | mit M9 |
+| K7 | Brute-Force-Vergleich eines kleinen Gesamtsystems (2D oder kleine Apertur) | gesamte Kette gegen hp-FEM | ganze Kette | eine rigorose hp-FEM-Rechnung über alles | P4 |
 
-K6 ist die Abnahme des Planers: Der Plan muss im vorhergesagten Budget liegen, wie es F2 und F3 in
+K7 ist die Abnahme des Planers: Der Plan muss im vorhergesagten Budget liegen, wie es F2 und F3 in
 Fieldtracing für die Feldbausteine gezeigt haben.
 
 ## 9. Entscheidungen, die vorher fallen müssen
@@ -294,12 +394,14 @@ Fieldtracing für die Feldbausteine gezeigt haben.
 | D7 | GPU | Kern weiter ohne GPU (ADR 0013), bis ein eigenes ADR folgt; Löser dürfen GPU nutzen. Erster GPU-Kandidat im Kern ist `rtt-field` (FFT/SFT), nach P1 und mit Messungen |
 | D8 | Determinismus mit externen Lösern | Bitgleichheit nur für den Kern; je Löser die in `describe()` erklärte Toleranz, im Ergebnis vermerkt |
 | D9 | Lizenzen | Adapter-Pakete getrennt vom MIT-Kern; Lizenz je Löser im Inventar |
-| D10 | Reihenfolge der Löser | RCWA und BEM zuerst (K1–K3), dann BPM (K4), dann bio-optisch (K5), FEM bei Bedarf als Gegenprobe zu BEM und für Nahfelder |
+| D10 | Reihenfolge der Löser | FourierGrating und CliffordBem zuerst (K1–K3); BWPM parallel neu (B0–B4), dann K4; BioOptoMD über Datenports (K5); hp-FEM als Gegenprobe (K7) und für Nahfelder; SpeckleBem mit M9 (K6) |
+| D11 | Ort der BWPM | eigenes Repository mit den Regeln von Fieldtracing, Konventionen von Raytatouille von Anfang an (6.6) |
+| D12 | Erweiterungen in den Modulen (Spektrum als Einfall in CliffordBem und SpeckleBem, absolute Leistung) | als Issues in den jeweiligen Repositories, nach Freigabe des Maintainers; dieses Projekt liest dort nur |
 
 ## 10. Risiken
 
 - **Konventionen:** Zeitvorzeichen, Polarisationsbasis und Normierung unterscheiden sich zwischen
-  Codes. Gegenmittel: Konformitätstest vor jedem Adapter, Anpassung nur im Adapter.
+  Codes (SpeckleBem e^(+jωt), FourierGrating mit Schichtung in y und lokalem Phasenbezug). Gegenmittel: Konformitätstest vor jedem Adapter, Anpassung nur im Adapter.
 - **Abtastung an Ports:** Periodische Ports (RCWA), Gitter (BPM, Felder) und Strahlnetze passen
   nicht von selbst zusammen; schlechte Wahl verschiebt den Fehler an die Übergänge. Gegenmittel:
   Umwandlungen als geprüfte Operatoren mit Fehlermodell, Abtastung aus dem Budget.
@@ -316,13 +418,16 @@ Fieldtracing für die Feldbausteine gezeigt haben.
 
 ## 11. Nächste Schritte
 
-1. Inventar der vorhandenen Löser nach Anhang A ausfüllen (Maintainer, mit Hilfe).
-2. Entscheidungen D1, D2 und D10 treffen; danach den ADR-Entwurf „Fusion“ schreiben.
-3. Prototyp-Repository anlegen und K1 als ersten Fall aufsetzen (RCWA-Tabelle im Tracer, über die
-   Python-API von Raytatouille).
-4. Nach v1.0: P1 nach `docs/rtt-port/`; P2 parallel mit K2 und K3.
+1. Entscheidungen D1, D2, D10–D12 treffen; danach den ADR-Entwurf „Fusion“ schreiben.
+2. BWPM: Repository anlegen, Stufe B0 (Spezifikation mit Konventionsabgleich), dann B1.
+3. Prototyp-Repository der Fusion anlegen und K1 als ersten Fall aufsetzen (FourierGrating-Tabelle
+   im Tracer, über die Python-APIs von Raytatouille und `fouriergrating`).
+4. Issues für D12 in CliffordBem und SpeckleBem vorschlagen.
+5. Nach v1.0: P1 nach `docs/rtt-port/`; P2 parallel mit K2 und K3.
 
-## Anhang A: Vorlage für das Inventar der Löser
+## Anhang A: Vorlage für das Inventar weiterer Löser
+
+Ausgefüllt für die vorhandenen Module in Abschnitt 2.1; für neue Module dieselben Felder.
 
 | Feld | Inhalt |
 | --- | --- |

@@ -42,3 +42,10 @@ Volltextprüfung (AGENTS.md, Regel 5).
 
 Eine Volltextprüfung steht für alle diese Quellen noch aus; sie ist Voraussetzung, bevor eine
 Gleichungsnummer daraus im Code steht.
+
+## Für die Planung der Fusion (`docs/rtt-fusion/plan.md`)
+
+| Kürzel | Quelle | Status | Verwendet für |
+| --- | --- | --- | --- |
+| wende2023 | M. Wende, J. Drozella, A. M. Herkommer, „Fast bidirectional vector wave propagation method showcased on targeted noise reduction in imaging fiber bundles using 3D-printed micro optics“, Opt. Express 31(18), 28874–28890 (2023), doi:10.1364/OE.497244 (CC BY 4.0) | Volltext vom Maintainer bereitgestellt (2026-11-05); Formeln noch nicht nachgerechnet | BWPM (6.6), Pilot K4 |
+| wende2022 | M. Wende, J. Drozella, A. Toulouse, A. M. Herkommer, „Fast algorithm for the simulation of 3D-printed microoptics based on the vector wave propagation method“, Opt. Express 30(22), 40161–40173 (2022) | nur aus dem Literaturverzeichnis von wende2023, nicht geprüft | FPWPM als Grundlage der BWPM |
