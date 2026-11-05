@@ -186,3 +186,65 @@ def test_vector_focus_is_divergence_free() -> None:
     dy = np.fft.ifft(1j * kk[:, None] * np.fft.fft(e[..., 1], axis=0), axis=0)
     dz = (planes[2].values[..., 2] - planes[0].values[..., 2]) / (2 * h)
     assert np.max(np.abs(dx + dy + dz)) < 1e-3 * K * np.max(np.abs(e))
+
+
+def _rayleigh_sommerfeld_plane(
+    f: float, a: float, defocus: float, rho: FloatArray, n_r: int = 200, n_phi: int = 128
+) -> ComplexArray:
+    """Exact RS field at radii `rho` (mm) in the plane z = f + δz, U = 1, spherical exit phase.
+
+    The field is rotationally symmetric, so one azimuth suffices. Gauss-Legendre in r, trapezoid
+    in φ (periodic, spectral); the common factor exp(ikf) is omitted. Changes by < 1e-11 at 1.5
+    times the nodes for N_F ≤ 1000.
+    """
+    x, w = np.polynomial.legendre.leggauss(n_r)
+    r, wr = 0.5 * a * (x + 1.0), 0.5 * a * w
+    angles = 2.0 * np.pi * np.arange(n_phi) / n_phi
+    rr, pp = np.meshgrid(r, angles, indexing="ij")
+    weights = (wr * r)[:, None] * (2.0 * np.pi / n_phi)
+    sphere = np.sqrt(f * f + rr * rr)
+    d = f + defocus
+    values = []
+    for rho_t in rho:
+        dist = np.sqrt(d * d + rr * rr - 2.0 * rr * rho_t * np.cos(pp) + rho_t * rho_t)
+        kernel = (
+            d / (2 * np.pi * dist**2) * (1.0 / dist - 1j * K) * np.exp(1j * K * (dist - sphere))
+        )
+        values.append(complex(np.sum(weights * kernel)))
+    return np.array(values)
+
+
+def _t4_off_axis(fresnel_number: float, defocus_rel: float) -> float:
+    """Max deviation Debye vs. RS off the axis (x axis and diagonal, |ρ| ≤ 1.2 λ/NA, past the
+    second dark ring at 1.12 λ/NA), relative to the largest Debye value; δz in units of λ/NA²."""
+    na = 0.1
+    tan_t = np.tan(np.arcsin(na))
+    f = fresnel_number * LAMBDA_UM * 1e-3 / tan_t**2
+    a = f * tan_t
+    defocus = defocus_rel * LAMBDA_UM * 1e-3 / na**2
+
+    def residual(x: FloatArray, y: FloatArray) -> ComplexArray:
+        return np.ones_like(x, dtype=np.complex128)
+
+    out = debye_focus(residual, f, K, na, n=128, pad=4, defocus=defocus)
+    c = out.x.size // 2
+    limit = 1.2 * LAMBDA_UM * 1e-3 / na
+    idx = np.nonzero((out.x >= 0) & (out.x <= limit))[0]
+    diag = idx[np.sqrt(2) * out.x[idx] <= limit]
+    carrier = np.exp(1j * (out.phase_offset - K * f))
+    debye = np.concatenate([out.values[c, idx], out.values[diag, diag]]) * carrier
+    rho = np.concatenate([out.x[idx], np.sqrt(2) * out.x[diag]])
+    rs = _rayleigh_sommerfeld_plane(f, a, defocus, rho)
+    return float(np.max(np.abs(rs - debye)) / np.max(np.abs(debye)))
+
+
+@pytest.mark.parametrize(
+    ("defocus_rel", "low", "high"), [(0.0, 0.25, 0.5), (-1.0, 1.2, 2.0), (1.0, 1.2, 2.0)]
+)
+def test_t4_off_axis(defocus_rel: float, low: float, high: float) -> None:
+    # T4 in 2D: off the axis the Debye integral deviates from RS like c/N_F as well
+    numbers = (3.0, 10.0, 30.0, 100.0, 1000.0)
+    deviation = [_t4_off_axis(nf, defocus_rel) for nf in numbers]
+    assert all(d1 > d2 for d1, d2 in pairwise(deviation))
+    assert all(low < d * nf < high for d, nf in zip(deviation[1:], numbers[1:], strict=True))
+    assert deviation[-1] < 2e-3
