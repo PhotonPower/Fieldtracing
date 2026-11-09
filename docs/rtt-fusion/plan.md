@@ -3,7 +3,8 @@
 > **Entwurf** (2026-11-05) zur Abstimmung mit dem Maintainer. Nichts davon ist in Raytatouille
 > angelegt (Fieldtracing, AGENTS.md Regel 8); Entscheidungen fallen dort nach dessen Prozess.
 > Stand Raytatouille: Commit `6078e55` (nach 0.9.0, M8 offen), gelesen am 2026-11-05.
-> Inventar der Module (Abschnitt 2.1) aus den Repositories des Maintainers, gelesen am 2026-11-05.
+> Inventar der Module (Abschnitt 2.1) aus den Repositories des Maintainers, gelesen am 2026-11-05;
+> BindOptiX ergänzt am 2026-11-09 (K8, D13, Anhang A.1).
 
 ## 1. Ziel
 
@@ -65,6 +66,7 @@ Gelesen am 2026-11-05 (Repositories unter `PhotonPower`, alle MIT, nur lesend).
 | **SpeckleBem** | Oberflächen-Integralgleichungen (PMCHWT u. a.), RWG, MLFMM; raue Flächen und beliebige Körper, Speckle-Statistik | Phase 4 (MLFMM) weit fortgeschritten, Python-API für Simulation und Felder | C++20, Python `specklebem` (pybind11), `.npy`/HDF5 | geplant (Phase 7) |
 | **BioOptoMD** | Molekulardynamik von Biorezeptoren an Sensoroberflächen, Optik-Observer: Übergangsdipole, FRET-Geometrie, Brechzahlprofil n(z) (Lorentz-Lorenz) | Phase 9.3 abgenommen | C++/CUDA, Python `biooptomd` (nanobind, DLPack) | nur GPU |
 | **BWPM** (geplant) | schnelle bidirektionale vektorielle Wellenpropagation nach Wende et al. 2023 auf Basis der FPWPM | – | – | vorgesehen |
+| **BindOptiX** (geplant) | kein Lichtlöser: Zeit-, Transport- und Biologieschicht für Biosensoren (Langevin-Partikel für Zellen, Konvektion–Diffusion, Bindungskinetik, Signal- und Kameramodell aus optischen Karten) | Z0 (Spezifikation) | Python-Referenz, später C++/CUDA | vorgesehen |
 
 **Konventionen** – der wichtigste Befund, denn hier entstehen die teuersten Kopplungsfehler:
 
@@ -76,6 +78,7 @@ Gelesen am 2026-11-05 (Repositories unter `PhotonPower`, alle MIT, nur lesend).
 | CliffordBem | e^(−iωt) | freie Längeneinheit L, ε₀ = μ₀ = 1 | frei; Strahlen auf Leistung 1 normiert | Einheiten, absolute Leistung |
 | SpeckleBem | **e^(+jωt)**, Im ε ≤ 0 | SI (m) | Licht aus z < 0 in +z; p in xz-Ebene, s entlang y | **komplex konjugieren** (Felder, Materialien), Basis |
 | BioOptoMD | – (keine Wellenoptik) | nm, ps, kJ/mol, e·nm | Sensoroberfläche bei z, n(z)-Profil | Einheiten; nur Datenkopplung |
+| BindOptiX | – (nur Daten); Feldkarten mit e^(−iωt), je mW | µm, s, K, mW; Teilchen/µm³ | Sensoroberfläche z = 0, Lösung z > 0, Schwerkraft als Vektor | Pose und Spiegelregel z → −z zum RTT-System |
 
 **Ein- und Ausgänge**, soweit für Ports relevant:
 
@@ -200,6 +203,12 @@ Q und N sind **Datenports**: Sie verbinden kein Licht, sondern liefern Quellen u
 einseitig an ein Gebiet. Der Planer behandelt sie als Abhängigkeiten im Ausführungs-DAG, nicht als
 Pfadabschnitte. Kugelwellen (T-Matrix) braucht nach dem Inventar zunächst kein Modul, weil beide
 BEM-Codes Winkelspektren als Einfall nehmen; sie bleiben ein späterer Inhalt von M.
+
+**Vorgeschlagen (D13):** zwei weitere Datenports für Biosensoren über der Zeit, **F Feldkarte**
+(komplexes E auf geschachtelten Volumengittern je mW, optional Absorptionsdichte und ΔT; Richtung
+Licht → Biologie) und **B Belegung** (Anteile der Rezeptorzustände über Ort und Zeit, Ereignisliste
+für Zellen; gewichtet die Q-Ensembles je Zustand), dazu die Antwortkarte eines Emitters als Tabelle
+in M (Zerfalls- und Detektionstensoren, symmetrisch 3×3 je Ort). Entwurf: `PhotonPower/BindOptiX`, `docs/adr-entwurf-datenports.md`.
 
 ### 6.3 Umwandlungen
 
@@ -377,6 +386,7 @@ stammt.
 | K5 | Biosensor: Rezeptorschicht aus BioOptoMD, Fluorophore als Emitter, Abbildung durch ein Objektiv | BioOptoMD + CliffordBem bzw. hp-FEM + `rtt-field` + Raytatouille | N → Schicht, Q → Emitter, Fernfeld → S → H → R | Emitterrate gegen Reihenlösung (in CliffordBem validiert); ohne Schicht = freier Dipol | P5 |
 | K6 | Raue Fläche als Streuer in einem Abbildungssystem | Raytatouille (M9) + SpeckleBem | S → SpeckleBem → Fernfeld/BSDF → P bzw. R | Fresnel für glatte Fläche (in SpeckleBem validiert), Energiebilanz | mit M9 |
 | K7 | Brute-Force-Vergleich eines kleinen Gesamtsystems (2D oder kleine Apertur) | gesamte Kette gegen hp-FEM | ganze Kette | eine rigorose hp-FEM-Rechnung über alles | P4 |
+| K8 | Biosensor über der Zeit: Einfang von Bakterien, Rezeptorzustände, Fluoreszenz durch gedruckte SIL mit Spiegelrand und Relay-Optik auf die Kamera | BioOptoMD + hp-FEM bzw. CliffordBem + `rtt-field` + Raytatouille + Voxelspaetzle + BindOptiX | Q je Zustand, F, Antwortkarte (M) → BindOptiX → B → Signal | Teilprüfungen gegen Chance–Prock–Silbey, Lukosz–Kunz, Transfer-Matrix (DP1–DP8 im ADR-Entwurf); ohne Analyt = Untergrund allein | P5 (nach K5) |
 
 K7 ist die Abnahme des Planers: Der Plan muss im vorhergesagten Budget liegen, wie es F2 und F3 in
 Fieldtracing für die Feldbausteine gezeigt haben.
@@ -397,6 +407,7 @@ Fieldtracing für die Feldbausteine gezeigt haben.
 | D10 | Reihenfolge der Löser | FourierGrating und CliffordBem zuerst (K1–K3); BWPM parallel neu (B0–B4), dann K4; BioOptoMD über Datenports (K5); hp-FEM als Gegenprobe (K7) und für Nahfelder; SpeckleBem mit M9 (K6) |
 | D11 | Ort der BWPM | eigenes Repository mit den Regeln von Fieldtracing, Konventionen von Raytatouille von Anfang an (6.6) |
 | D12 | Erweiterungen in den Modulen (Spektrum als Einfall in CliffordBem und SpeckleBem, absolute Leistung) | als Issues in den jeweiligen Repositories, nach Freigabe des Maintainers; dieses Projekt liest dort nur |
+| D13 | Datenports für Biosensoren über der Zeit (F, B; Antwortkarte als M) | ADR-Entwurf aus BindOptiX (`PhotonPower/BindOptiX`, `docs/adr-entwurf-datenports.md`); F und B als Datenports wie N und Q, Antwortkarte ohne neue Darstellung |
 
 ## 10. Risiken
 
@@ -441,3 +452,18 @@ Ausgefüllt für die vorhandenen Module in Abschnitt 2.1; für neue Module diese
 | Linear / reziprok / deterministisch | |
 | Ressourcen | CPU/GPU, Speicher, typische Laufzeit für einen Pilotfall |
 | Validierung | vorhandene Referenzfälle |
+
+### A.1 BindOptiX (ergänzt 2026-11-09)
+
+| Feld | Inhalt |
+| --- | --- |
+| Name, Repository, Version | BindOptiX, `PhotonPower/BindOptiX`, 0.0 (Spezifikation Z0 als PR #1) |
+| Verfahren, Gültigkeitsbereich | kein Lichtlöser; Transport (Langevin-Partikel für Zellen, Konvektion–Diffusion für Moleküle), Oberflächenkinetik, Assay-Abläufe, Signal- und Kameramodell aus optischen Karten; quasistatisch: Optik einmal je Design, Biologie über s bis h |
+| Sprache, Python-Anbindung | Python-Referenz (NumPy, SciPy), danach C++/CUDA-Kern mit Python-Anbindung |
+| Lizenz | MIT |
+| Eingaben | Geometrie (Nurbforge), Q je Rezeptorzustand (BioOptoMD), F (hp-FEM, CliffordBem), Antwortkarte als M (Kette von K5), Strömung, Assay-Protokoll |
+| Ausgaben | B (Belegung über der Zeit), Photonenraten je Spot und Pixel, synthetische Kamerabilder, Kennzahlen (Nachweisgrenze, Zeit bis zum Ergebnis, Konfusionsmatrix) |
+| Konventionen | keine Wellenoptik intern; F mit e^(−iωt), je mW; Sensorsystem z = 0, Lösung z > 0 (wie BioOptoMD); µm, s, K intern, mm im Austausch; Teilchenzahlen statt mol |
+| Linear / reziprok / deterministisch | nichtlinear (Kinetik), stochastisch mit Seed; Ergebnisse mit Standardfehler |
+| Ressourcen | Referenz auf der CPU; GPU (RTX 6000 Ada, RTX 3090) für > 10⁶ Partikel |
+| Validierung | geplant: BindOptiX `docs/testfaelle.md` (T1–T26), Konformität DP1–DP8 im ADR-Entwurf |
