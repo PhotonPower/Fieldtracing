@@ -4,6 +4,13 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 
 ## [Unreleased]
 
+### Behoben
+
+- Debye-Fokus (`chain.debye`, `focus.debye_focus`): Pupillen, die keine zentrierte Kreisscheibe
+  sind (vignettiert, teilweise abgedeckt, mit Mittenabschattung), wurden zur vollen k-Scheibe
+  aufgefüllt; eine Halbscheibe ergab die doppelte Leistung. Der k-Bereich ist jetzt zusätzlich das
+  Abbild des Trägers der Stützstellen; `debye_focus` hat dafür den Parameter `support` (#79).
+
 ### Hinzugefügt
 
 - Projektgerüst: Dokumentation, Plan (`docs/roadmap.md`), Konventionen, ADR 0001–0003, CI

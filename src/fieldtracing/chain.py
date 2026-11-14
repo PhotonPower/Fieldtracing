@@ -676,6 +676,54 @@ def resample(
 # ----- focus: Debye integral and Rayleigh-Sommerfeld (paper, sections 2 and 5.3) ----------------
 
 
+#: an inner Delaunay triangle of the samples whose longest edge exceeds this multiple of the
+#: local sample spacing at its corners spans a gap (an obstruction) and is not part of the pupil
+SUPPORT_GAP = 3.0
+
+
+def _support(g: GridlessField) -> Callable[[FloatArray, FloatArray], NDArray[np.bool_]] | None:
+    """The pupil the samples cover (issue #79): the union of their Delaunay triangles without
+    inner triangles across gaps (an obstruction stays a hole), widened around each sample by half
+    its distance to its nearest neighbour – between samples on a grid the true edge lies on average
+    half a spacing beyond the last sample, as the stop's edge does for the disc weights (a fully
+    sampled disc is thus covered entirely and gives the result of the disc alone), while samples
+    placed densely on an edge (edge-refined rays) widen it only by their small spacing. The edge
+    is known only to this half spacing, so its error is first order in the local sample spacing.
+    Triangles with an edge on the convex hull stay (along a curved edge they are long and flat but
+    inside the pupil), so a concave outer outline is filled to its hull. None (the stop's disc)
+    for fewer than three samples.
+    """
+    from scipy.spatial import Delaunay, QhullError
+
+    pts = np.asarray(g.points, dtype=np.float64)
+    if len(pts) < 3:
+        return None
+    try:
+        tri = Delaunay(pts)
+    except QhullError:
+        return None
+    tree = cKDTree(pts)
+    near, _ = tree.query(pts, k=2)
+    local = near[:, 1]  # distance of each sample to its nearest neighbour
+    corners = pts[tri.simplices]
+    longest = np.max(np.linalg.norm(corners - np.roll(corners, 1, axis=1), axis=2), axis=1)
+    on_hull = np.any(tri.neighbors < 0, axis=1)
+    allowed = (longest <= SUPPORT_GAP * np.max(local[tri.simplices], axis=1)) | on_hull
+    reach = 0.5 * local
+
+    def inside(x: FloatArray, y: FloatArray) -> NDArray[np.bool_]:
+        q = np.stack([np.ravel(x), np.ravel(y)], axis=-1)
+        s = tri.find_simplex(q)
+        ok = (s >= 0) & allowed[np.where(s >= 0, s, 0)]
+        rest = np.flatnonzero(~ok)
+        if rest.size:
+            near_dist, idx = tree.query(q[rest], k=1)
+            ok[rest] = near_dist <= reach[idx]
+        return np.asarray(ok.reshape(np.shape(x)))
+
+    return inside
+
+
 def debye(
     f: GridlessField | GriddedField,
     distance: float,
@@ -691,7 +739,9 @@ def debye(
     |k⊥| ≤ k·sin_max is the image of the stop |ρ| ≤ f·sin_max/cos θ_max under the sphere's ray
     map, with subpixel-weighted boundary; boundary cells whose centre lies just outside the
     samples take the nearest sample (the disc weights alone set the edge, otherwise the edge
-    would shrink by up to a cell and the error would be first order in the k-step).
+    would shrink by up to a cell and the error would be first order in the k-step). The domain
+    is further cut to the image of the pupil the samples cover (`_support`, issue #79), so a
+    vignetted, partly covered or obstructed pupil keeps its shape and its power.
 
     Args:
         f: GridlessField in the space domain (exit plane, stop not yet applied).
@@ -711,7 +761,7 @@ def debye(
         v = g.residual_at(q, outside="nearest") * np.exp(1j * (g.phase_at(q) - sphere))[:, None]
         return np.asarray(v.reshape(*np.shape(x), 3))
 
-    focal = debye_focus(residual, distance, k, sin_max, n=n, pad=pad)
+    focal = debye_focus(residual, distance, k, sin_max, n=n, pad=pad, support=_support(g))
     values = np.asarray(focal.values * np.exp(1j * focal.phase_offset))
     out = GriddedField(float(focal.x[1] - focal.x[0]), values, g.wavelength_um, g.refractive_index)
     n_f = (distance * sin_max) ** 2 / (1.0 - sin_max**2) * k / (2.0 * math.pi * distance)

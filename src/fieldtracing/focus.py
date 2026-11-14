@@ -10,11 +10,12 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 import numpy as np
+from numpy.typing import NDArray
 from scipy.special import j1, jv
 
 from fieldtracing._types import ComplexArray, FloatArray
 from fieldtracing.fourier import centered_grid, ift
-from fieldtracing.sft import circular_aperture_weights
+from fieldtracing.sft import circular_aperture_weights, region_weights
 
 
 def spherical_phase(rho: FloatArray, f: float, k: float) -> FloatArray:
@@ -81,6 +82,7 @@ def debye_focus(
     defocus: float = 0.0,
     subpixel: bool = True,
     oversample: int = 8,
+    support: Callable[[FloatArray, FloatArray], NDArray[np.bool_]] | None = None,
 ) -> FocalField:
     """Focal field of a converging wave by the chain PFT → angular spectrum → FFT (eq. debye).
 
@@ -102,6 +104,11 @@ def debye_focus(
         defocus: δz in mm, positive away from the lens.
         subpixel: weight boundary cells by their covered fraction (recommended).
         oversample: sub-samples per cell and axis for the boundary weights.
+        support: the pupil in the exit plane, support(x, y) → bool (mm), when it is not the
+            centred disc of the stop – vignetting, a covered part, an obstruction (issue #79).
+            The k-domain is then {|k⊥| ≤ k sin_max} ∩ {k⊥ : support(ρ_s(k⊥))} with the ray map
+            ρ_s = -f k⊥/k_z of eq. debye, boundary cells weighted by their covered fraction.
+            None: the disc alone.
 
     Returns:
         FocalField on an (n·pad)² grid. Validity: Fresnel number of the aperture ≫ 1
@@ -114,11 +121,26 @@ def debye_focus(
     k_max = k * sin_max
     dk = 2.0 * k_max / (n - 2)
     kx = centered_grid(n, dk)
-    weights = (
-        circular_aperture_weights(kx, kx, k_max, oversample)
-        if subpixel
-        else (kx[None, :] ** 2 + kx[:, None] ** 2 <= k_max * k_max).astype(np.float64)
-    )
+    if support is None:
+        weights = (
+            circular_aperture_weights(kx, kx, k_max, oversample)
+            if subpixel
+            else (kx[None, :] ** 2 + kx[:, None] ** 2 <= k_max * k_max).astype(np.float64)
+        )
+    else:
+        pupil = support
+
+        def inside(px: FloatArray, py: FloatArray) -> NDArray[np.bool_]:
+            disc = px * px + py * py <= k_max * k_max
+            kz_ = np.sqrt(k * k - np.minimum(px * px + py * py, k_max * k_max))
+            return np.asarray(disc & pupil(-f * px / kz_, -f * py / kz_))
+
+        kxx, kyy = np.meshgrid(kx, kx)
+        weights = (
+            region_weights(kx, kx, inside, oversample)
+            if subpixel
+            else inside(kxx, kyy).astype(np.float64)
+        )
     k_perp_sq = np.minimum(kx[None, :] ** 2 + kx[:, None] ** 2, (k * (1.0 + sin_max) / 2.0) ** 2)
     kz = np.sqrt(k * k - k_perp_sq)
     cos_sq = (kz / k) ** 2
