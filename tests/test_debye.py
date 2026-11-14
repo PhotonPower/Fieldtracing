@@ -12,6 +12,7 @@ from itertools import pairwise
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 from scipy.integrate import quad
 from scipy.special import jv
 
@@ -248,3 +249,110 @@ def test_t4_off_axis(defocus_rel: float, low: float, high: float) -> None:
     assert all(d1 > d2 for d1, d2 in pairwise(deviation))
     assert all(low < d * nf < high for d, nf in zip(deviation[1:], numbers[1:], strict=True))
     assert deviation[-1] < 2e-3
+
+
+# ----- issue #79: pupils that are not a centred disc (vignetting, a covered half, obstruction) --
+
+
+def _half_disc_reference(x: float, y: float, k_max: float) -> complex:
+    """∬ exp(i k⊥·ρ) d²k⊥ over the half disc |k⊥| ≤ k_max, k_y ≤ 0 (polar quadrature)."""
+
+    def part(fn: Callable[[float], float]) -> float:
+        val, _ = quad(lambda phi: fn(phi), np.pi, 2 * np.pi, limit=200)
+        return float(val)
+
+    def radial(phi: float, comp: Callable[[float], float]) -> float:
+        a = x * np.cos(phi) + y * np.sin(phi)
+        val, _ = quad(lambda kr: kr * comp(kr * a), 0.0, k_max, limit=200)
+        return float(val)
+
+    re = part(lambda phi: radial(phi, np.cos))
+    im = part(lambda phi: radial(phi, np.sin))
+    return complex(re, im)
+
+
+def _half_disc_error(n: int) -> float:
+    """Relative deviation of the focus of a pupil covered on one half (exit-plane support y ≥ 0)
+    from the direct quadrature, U = cos²θ (constant integrand)."""
+    f, sin_max = 2.0, 0.5
+
+    def residual(x: FloatArray, y: FloatArray) -> ComplexArray:
+        return np.asarray(_cos_theta(x, y, f) ** 2, dtype=np.complex128)
+
+    out = debye_focus(
+        residual, f, K, sin_max, n=n, pad=4, support=lambda x, y: np.asarray(y >= 0.0)
+    )
+    m = out.x.size
+    airy = 0.61 * LAMBDA_UM * 1e-3 / sin_max
+    picks = [(m // 2, j) for j in range(m // 2 - 6, m // 2 + 7, 3)] + [(m // 2 + 3, m // 2 + 2)]
+    errors, peak = [], 0.0
+    for i, j in picks:
+        ref = -1j * f / (2 * np.pi * K) * _half_disc_reference(out.x[j], out.x[i], K * sin_max)
+        errors.append(abs(out.values[i, j] - ref))
+        peak = max(peak, abs(ref))
+    assert np.max(np.abs(out.x[[p[1] for p in picks]])) < 3 * airy
+    return float(max(errors) / peak)
+
+
+def test_issue_79_half_covered_pupil_matches_quadrature() -> None:
+    errors = [_half_disc_error(n) for n in (64, 128, 256)]
+    assert errors[2] < errors[1] < errors[0]  # converges with the step (straight edge, weighted)
+    assert errors[2] < 2e-3
+
+
+def test_issue_79_full_support_changes_nothing() -> None:
+    f, sin_max = 2.0, 0.5
+
+    def residual(x: FloatArray, y: FloatArray) -> ComplexArray:
+        return np.asarray(_cos_theta(x, y, f) ** 2, dtype=np.complex128)
+
+    plain = debye_focus(residual, f, K, sin_max, n=64, pad=2)
+    with_support = debye_focus(
+        residual, f, K, sin_max, n=64, pad=2, support=lambda x, y: np.ones(np.shape(x), bool)
+    )
+    assert np.array_equal(plain.values, with_support.values)
+
+
+@pytest.mark.parametrize("shape", ["half disc", "two offset circles", "central obstruction"])
+def test_issue_79_chain_debye_keeps_the_pupil_shape(shape: str) -> None:
+    """The Debye step of the chain integrates over the support of the field's samples: the power
+    after it equals the power through the true pupil (the half disc gave twice that before, the
+    vignetted pupil 25 % more, the obstruction was filled). Reference: midpoint quadrature of
+    cos θ (|U| = 1) over the exact pupil shape on a fine grid, independent of the samples."""
+    from fieldtracing.chain import debye
+    from fieldtracing.field import GriddedField, GridlessField
+
+    lam, dist, radius = 0.546, 164.5, 4.4
+    k = wavenumber(lam)
+
+    def pupil(x: FloatArray, y: FloatArray) -> NDArray[np.bool_]:
+        r = np.hypot(x, y)
+        if shape == "half disc":
+            return np.asarray((r <= radius) & (y >= 0.0))
+        if shape == "central obstruction":
+            return np.asarray((r <= radius) & (r >= 1.5))
+        return np.asarray((np.hypot(x, y - 0.8) <= radius) & (np.hypot(x, y + 0.8) <= radius))
+
+    # the support's edge is known to half a sample spacing (first order, `chain._support`): with
+    # 61 samples across the obstructed pupil give 2.5 % less power, 121 samples 1.5 % (n = 128)
+    g = np.linspace(-radius, radius, 121)
+    xx, yy = np.meshgrid(g, g)
+    p = np.stack([xx.ravel(), yy.ravel()], axis=-1)
+    p = p[pupil(p[:, 0], p[:, 1])]
+    rr = np.sqrt(np.sum(p * p, axis=1) + dist * dist)
+    hess = -k * (np.eye(2)[None] - np.einsum("ni,nj->nij", p, p) / rr[:, None, None] ** 2)
+    hess = hess / rr[:, None, None]
+    u = np.zeros((len(p), 3), dtype=np.complex128)
+    u[:, 0] = 1.0
+    field = GridlessField(p, -k * rr, -k * p / rr[:, None], hess, u, lam, 1.0)
+
+    h = 2e-3
+    fine = np.arange(-radius + h / 2, radius, h)
+    fx, fy = np.meshgrid(fine, fine)
+    before = float(np.sum(pupil(fx, fy) * _cos_theta(fx, fy, dist)) * h * h)
+
+    sin_max = radius / np.hypot(radius, dist)
+    out, _ = debye(field, dist, sin_max, n=128, pad=2)
+    assert isinstance(out, GriddedField)
+    after = float(np.sum(np.abs(np.asarray(out.values)) ** 2) * out.step**2)
+    assert after == pytest.approx(before, rel=2e-2)
