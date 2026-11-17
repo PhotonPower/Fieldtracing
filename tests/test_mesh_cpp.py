@@ -99,3 +99,21 @@ def test_support_test_equals_python(monkeypatch: pytest.MonkeyPatch, seed: int) 
     grid = np.linspace(-1.2, 1.2, 101)  # as the Debye weights call it: 2D arrays
     xx, yy = np.meshgrid(grid, grid)
     assert np.array_equal(fast(xx, yy), slow(xx, yy))
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2])
+def test_curvature_fit_on_a_subset_equals_the_full_program(seed: int) -> None:
+    """`selection.fit_curvature` solves large clouds on a growing subset: the same minimax
+    curvature and residual as the linear program over every sample."""
+    from fieldtracing import selection
+
+    rng = np.random.default_rng(seed)
+    p = rng.uniform(-1.0, 1.0, size=(6000, 2))
+    p = p[np.hypot(p[:, 0], p[:, 1]) <= 1.0]
+    c0 = np.array([[3.0, 0.4], [0.4, -1.0]]) * (seed + 1)
+    g = p @ c0 + 0.05 * (seed + 1) * np.stack([p[:, 0] ** 3, p[:, 1] ** 2 * p[:, 0]], axis=1)
+    g += rng.normal(scale=1e-3 * seed, size=g.shape)
+    c_full, t_full = selection._curvature_lp(p, g)
+    c, t = selection.fit_curvature(p, g)
+    assert t == pytest.approx(t_full, rel=1e-8)
+    assert np.allclose(c, c_full, rtol=1e-8, atol=1e-10)

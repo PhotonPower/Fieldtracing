@@ -18,6 +18,11 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   Punktlage in den Dreiecken und nächste Stichprobe laufen über Buckets, und die Suche endet beim
   größten Saum (`reach`). Das Ergebnis ist Punkt für Punkt gleich wie mit scipy und etwa
   fünfmal schneller.
+- `selection.fit_curvature` (Minimax-Krümmung des Planers) löst große Wolken über eine wachsende
+  Teilmenge: Erst die äußersten Stichproben und die mit den größten Gradienten, dazu eine
+  gleichmäßige Auswahl, dann die verletzten Stichproben, bis keine mehr verletzt ist. Das ist das
+  Optimum des ganzen linearen Programms (gleich bis auf etwa 1e-11), bei 20 000 Stichproben
+  10- bis 25-mal schneller.
 - `GridlessField.triangulation()` und `.tree()`: Delaunay-Triangulierung und KD-Baum werden je
   Feld einmal gebaut und von `residual_at`, `phase_at` und der Debye-Pupille geteilt.
   `residual_at` interpoliert alle drei Komponenten über eine Triangulierung statt über drei.

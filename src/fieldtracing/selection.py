@@ -80,22 +80,13 @@ def fit_curvature_radial(rho: FloatArray, gradient: FloatArray) -> tuple[float, 
     return float(res.x[0]), float(res.x[1])
 
 
-def fit_curvature(points: FloatArray, gradient: FloatArray) -> tuple[FloatArray, float]:
-    """Minimax curvature matrix C for an SFT on an axis-aligned grid (paper, section 7.4).
+#: points of the first subproblem of `fit_curvature` (constraint generation); larger clouds are
+#: solved on a subset that grows by the violated points until it holds everywhere
+CURVATURE_SUBSET = 400
 
-    Minimises the largest Cartesian component of the residual gradient ∇ψ - C·ρ over the samples,
-    max_i max(|∂_xψ_res|, |∂_yψ_res|), with C symmetric. On an axis-aligned grid this component
-    sets the Nyquist step π/max|∂ψ_res|.
 
-    Args:
-        points: (N, 2) sample positions in mm (include the aperture rim).
-        gradient: (N, 2) ∇ψ at the samples in 1/mm.
-
-    Returns:
-        (C (2, 2) in 1/mm², largest residual gradient component in 1/mm).
-    """
-    p = np.asarray(points, dtype=np.float64)
-    g = np.asarray(gradient, dtype=np.float64)
+def _curvature_lp(p: FloatArray, g: FloatArray) -> tuple[FloatArray, float]:
+    """The linear program of `fit_curvature` over the given samples: (C, t)."""
     x, y = p[:, 0], p[:, 1]
     zeros, ones = np.zeros_like(x), np.ones_like(x)
     # variables (c11, c12, c22, t); residuals r_x = g_x - c11 x - c12 y, r_y = g_y - c12 x - c22 y
@@ -116,6 +107,53 @@ def fit_curvature(points: FloatArray, gradient: FloatArray) -> tuple[FloatArray,
         raise RuntimeError(f"minimax fit failed: {res.message}")
     c11, c12, c22, t = res.x
     return np.array([[c11, c12], [c12, c22]]), float(t)
+
+
+def _curvature_residual(p: FloatArray, g: FloatArray, c: FloatArray) -> FloatArray:
+    """Largest Cartesian component of ∇ψ - C·ρ per sample."""
+    return np.asarray(np.max(np.abs(g - p @ c), axis=1))
+
+
+def fit_curvature(points: FloatArray, gradient: FloatArray) -> tuple[FloatArray, float]:
+    """Minimax curvature matrix C for an SFT on an axis-aligned grid (paper, section 7.4).
+
+    Minimises the largest Cartesian component of the residual gradient ∇ψ - C·ρ over the samples,
+    max_i max(|∂_xψ_res|, |∂_yψ_res|), with C symmetric. On an axis-aligned grid this component
+    sets the Nyquist step π/max|∂ψ_res|.
+
+    A minimax fit is fixed by a few extreme samples: large clouds are solved on a subset (the
+    samples farthest out and with the largest gradients, and an even spread) that grows by the
+    samples whose residual exceeds the subset's optimum until none does – the optimum of the
+    whole linear program, at the cost of a few small ones.
+
+    Args:
+        points: (N, 2) sample positions in mm (include the aperture rim).
+        gradient: (N, 2) ∇ψ at the samples in 1/mm.
+
+    Returns:
+        (C (2, 2) in 1/mm², largest residual gradient component in 1/mm).
+    """
+    p = np.asarray(points, dtype=np.float64)
+    g = np.asarray(gradient, dtype=np.float64)
+    n = len(p)
+    if n <= CURVATURE_SUBSET:
+        return _curvature_lp(p, g)
+    k = CURVATURE_SUBSET // 4
+    picks = [
+        np.argsort(np.hypot(p[:, 0], p[:, 1]))[-k:],
+        np.argsort(np.max(np.abs(g), axis=1))[-k:],
+        np.linspace(0, n - 1, 2 * k).astype(np.int64),
+    ]
+    subset = np.unique(np.concatenate(picks))
+    while True:
+        c, t = _curvature_lp(p[subset], g[subset])
+        residual = _curvature_residual(p, g, c)
+        tolerance = 1e-9 * max(t, float(np.max(np.abs(g))), 1e-300)
+        violated = np.flatnonzero(residual > t + tolerance)
+        if violated.size == 0:
+            return c, float(max(t, float(np.max(residual))))
+        worst = violated[np.argsort(residual[violated])[-CURVATURE_SUBSET:]]
+        subset = np.union1d(subset, worst)
 
 
 def sft_samples(
