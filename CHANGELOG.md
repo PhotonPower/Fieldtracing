@@ -13,6 +13,12 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 
 ### Hinzugefügt
 
+- C++ für das Netz der Strahlwolken: optionale Erweiterung `fieldtracing._mesh` (pybind11,
+  `setup.py`) für die Kanten, die Randdreiecke, den Zwei-Ring und den quadratischen Fit von
+  `mesh` (Ableitungen und Hesse-Matrizen, die `fit_derivatives`, `mesh_jacobian_cloud` und die
+  Fehlerschätzung des Planers brauchen). Gleiche Ergebnisse wie der Python-Code, der die Referenz
+  bleibt und ohne Compiler genutzt wird (`tests/test_mesh_cpp.py`). Die Wheels sind jetzt
+  plattformabhängig (cibuildwheel für Linux, Windows und macOS).
 - PyPI: Das Paket heißt dort `photonpower-fieldtracing` (der Name `fieldtracing` ist auf PyPI
   vergeben), importiert wird weiter `fieldtracing`. `.github/workflows/wheels.yml` baut Wheel
   (reines Python) und sdist und testet das installierte Wheel unter Linux, Windows und macOS. Ein
