@@ -15,7 +15,7 @@ from typing import Literal
 
 import numpy as np
 from scipy.interpolate import CloughTocher2DInterpolator, LinearNDInterpolator
-from scipy.spatial import cKDTree
+from scipy.spatial import Delaunay, cKDTree
 
 from fieldtracing._types import ComplexArray, FloatArray
 from fieldtracing.fourier import centered_grid
@@ -230,13 +230,30 @@ class GridlessField:
 
     # ----- evaluation -------------------------------------------------------------------------
 
+    def triangulation(self) -> Delaunay:
+        """Delaunay triangulation of the sample points, built once per field (the field is
+        immutable) and shared by `residual_at` and the Debye support."""
+        tri = self.__dict__.get("_triangulation")
+        if tri is None:
+            tri = Delaunay(np.asarray(self.points, dtype=np.float64))
+            object.__setattr__(self, "_triangulation", tri)
+        return tri
+
+    def tree(self) -> cKDTree:
+        """KD tree of the sample points, built once per field (nearest-sample queries)."""
+        tree = self.__dict__.get("_tree")
+        if tree is None:
+            tree = cKDTree(np.asarray(self.points, dtype=np.float64))
+            object.__setattr__(self, "_tree", tree)
+        return tree
+
     def phase_at(self, query: FloatArray) -> FloatArray:
         """ψ at arbitrary points from the second-order Taylor expansion about the nearest sample.
 
         The error is third order in the distance to the nearest sample.
         """
         q = np.asarray(query, dtype=np.float64)
-        _, idx = cKDTree(self.points).query(q)
+        _, idx = self.tree().query(q)
         d = q - self.points[idx]
         return np.asarray(
             self.phase[idx]
@@ -258,14 +275,13 @@ class GridlessField:
         """
         q = np.asarray(query, dtype=np.float64)
         interp_cls = LinearNDInterpolator if method == "linear" else CloughTocher2DInterpolator
-        out = np.empty((len(q), 3), dtype=np.complex128)
-        for c in range(3):
-            interp = interp_cls(self.points, self.amplitude[:, c], fill_value=np.nan)
-            out[:, c] = interp(q)
+        # one triangulation for all three components (the same as one per component)
+        interp = interp_cls(self.triangulation(), self.amplitude, fill_value=np.nan)
+        out = np.asarray(interp(q), dtype=np.complex128).reshape(len(q), 3)
         missing = np.any(np.isnan(out), axis=1)
         if np.any(missing):
             if outside == "nearest":
-                _, idx = cKDTree(self.points).query(q[missing])
+                _, idx = self.tree().query(q[missing])
                 out[missing] = self.amplitude[idx]
             else:
                 out[missing] = 0.0

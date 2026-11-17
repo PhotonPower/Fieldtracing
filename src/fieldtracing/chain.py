@@ -41,7 +41,7 @@ import math
 import warnings
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Literal, Protocol, TypeAlias
+from typing import Any, Literal, Protocol, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -681,6 +681,13 @@ def resample(
 SUPPORT_GAP = 3.0
 
 
+def _mesh_cpp() -> Any:
+    """The C++ extension `fieldtracing._mesh`, or None (not installed, or `mesh.USE_CPP` off)."""
+    from fieldtracing import mesh
+
+    return mesh._cpp()
+
+
 def _support(g: GridlessField) -> Callable[[FloatArray, FloatArray], NDArray[np.bool_]] | None:
     """The pupil the samples cover (issue #79): the union of their Delaunay triangles without
     inner triangles across gaps (an obstruction stays a hole), widened around each sample by half
@@ -693,16 +700,16 @@ def _support(g: GridlessField) -> Callable[[FloatArray, FloatArray], NDArray[np.
     inside the pupil), so a concave outer outline is filled to its hull. None (the stop's disc)
     for fewer than three samples.
     """
-    from scipy.spatial import Delaunay, QhullError
+    from scipy.spatial import QhullError
 
     pts = np.asarray(g.points, dtype=np.float64)
     if len(pts) < 3:
         return None
     try:
-        tri = Delaunay(pts)
+        tri = g.triangulation()
     except QhullError:
         return None
-    tree = cKDTree(pts)
+    tree = g.tree()
     near, _ = tree.query(pts, k=2)
     local = near[:, 1]  # distance of each sample to its nearest neighbour
     corners = pts[tri.simplices]
@@ -710,6 +717,16 @@ def _support(g: GridlessField) -> Callable[[FloatArray, FloatArray], NDArray[np.
     on_hull = np.any(tri.neighbors < 0, axis=1)
     allowed = (longest <= SUPPORT_GAP * np.max(local[tri.simplices], axis=1)) | on_hull
     reach = 0.5 * local
+    cpp = _mesh_cpp()
+    if cpp is not None:  # the same test in C++ (fieldtracing._mesh)
+        test = cpp.SupportTest(pts, np.asarray(tri.simplices, dtype=np.int64), allowed, reach)
+
+        def inside_cpp(x: FloatArray, y: FloatArray) -> NDArray[np.bool_]:
+            xs = np.ascontiguousarray(x, dtype=np.float64)
+            ys = np.ascontiguousarray(np.broadcast_to(y, np.shape(xs)), dtype=np.float64)
+            return np.asarray(test.inside(xs, ys))
+
+        return inside_cpp
 
     def inside(x: FloatArray, y: FloatArray) -> NDArray[np.bool_]:
         q = np.stack([np.ravel(x), np.ravel(y)], axis=-1)
