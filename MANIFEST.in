@@ -1,0 +1,2 @@
+# source of the optional C++ extension (setup.py)
+include cpp/mesh_module.cpp

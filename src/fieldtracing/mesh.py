@@ -18,8 +18,10 @@ from the neighbours of each ray:
 
 from __future__ import annotations
 
+import importlib
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -32,9 +34,26 @@ Region = Callable[[FloatArray, FloatArray], NDArray[np.bool_]]
 
 MIN_NEIGHBOURS = 5  # unknowns of the quadratic fit per component: ∂x, ∂y, ∂xx, ∂xy, ∂yy
 
+#: use the C++ extension `fieldtracing._mesh` where it is installed (same results; tests switch
+#: it off to compare with the Python code below)
+USE_CPP = True
+
+
+def _cpp() -> Any:
+    """The C++ extension, or None (not installed, or `USE_CPP` off)."""
+    if not USE_CPP:
+        return None
+    try:
+        return importlib.import_module("fieldtracing._mesh")
+    except ImportError:
+        return None
+
 
 def _edges(triangles: IntArray) -> IntArray:
     """Unique undirected edges (E, 2) of a triangle list."""
+    cpp = _cpp()
+    if cpp is not None:
+        return np.asarray(cpp.edges(np.ascontiguousarray(triangles, dtype=np.int64)))
     pairs = np.concatenate([triangles[:, [0, 1]], triangles[:, [1, 2]], triangles[:, [2, 0]]])
     return np.asarray(np.unique(np.sort(pairs, axis=1), axis=0), dtype=np.int64)
 
@@ -105,6 +124,9 @@ def triangulate(
 
 def _on_boundary(triangles: IntArray) -> NDArray[np.bool_]:
     """True for triangles with at least one edge that belongs to no other triangle."""
+    cpp = _cpp()
+    if cpp is not None:
+        return np.asarray(cpp.on_boundary(np.ascontiguousarray(triangles, dtype=np.int64)))
     pairs = np.sort(
         np.stack([triangles[:, [0, 1]], triangles[:, [1, 2]], triangles[:, [2, 0]]], axis=1),
         axis=2,
@@ -168,6 +190,13 @@ def _quadratic_fit(
     scalar = v.ndim == 1
     v2 = v[:, None] if scalar else v
     n = len(p)
+    cpp = _cpp()
+    if cpp is not None:
+        indptr, indices = cpp.two_ring(n, np.ascontiguousarray(triangles, dtype=np.int64))
+        grad, hess, ok = cpp.quadratic_fit(
+            np.ascontiguousarray(p), np.ascontiguousarray(v2), indptr, indices, MIN_NEIGHBOURS
+        )
+        return np.asarray(grad), np.asarray(hess), np.asarray(ok)
     ring = _two_ring(n, triangles)
     counts = np.diff(ring.indptr)
     width = int(np.max(counts)) if n else 0

@@ -2,7 +2,7 @@
 # Development tools are pinned in requirements-dev.txt.
 
 [build-system]
-requires = ["setuptools>=77"]
+requires = ["setuptools>=77", "pybind11>=2.12"]
 build-backend = "setuptools.build_meta"
 
 [project]
