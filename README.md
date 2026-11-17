@@ -19,6 +19,15 @@ dessen Release v1.0 (M8). Plan und Nacharbeiten: [docs/roadmap.md](docs/roadmap.
 
 ## Installieren und testen
 
+Als Paket (PyPI-Name `photonpower-fieldtracing`, der Name `fieldtracing` ist dort vergeben; im Code
+weiter `import fieldtracing`):
+
+```bash
+pip install photonpower-fieldtracing
+```
+
+Zum Entwickeln:
+
 ```bash
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt

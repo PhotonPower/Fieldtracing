@@ -13,6 +13,13 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 
 ### Hinzugefügt
 
+- PyPI: Das Paket heißt dort `photonpower-fieldtracing` (der Name `fieldtracing` ist auf PyPI
+  vergeben), importiert wird weiter `fieldtracing`. `.github/workflows/wheels.yml` baut Wheel
+  (reines Python) und sdist und testet das installierte Wheel unter Linux, Windows und macOS. Ein
+  Tag `v<Version>` hängt sie an ein GitHub-Release; *Run workflow* auf dem Tag mit `pypi` lädt sie
+  auf PyPI (Trusted Publishing, Umgebung `pypi`). Wer per Git-URL installiert, schreibt jetzt
+  `photonpower-fieldtracing @ git+https://github.com/PhotonPower/Fieldtracing.git@<commit>`.
+  Die Lizenzangabe ist ein SPDX-Ausdruck (setuptools ≥ 77).
 - Projektgerüst: Dokumentation, Plan (`docs/roadmap.md`), Konventionen, ADR 0001–0003, CI
   (ruff, mypy, pytest unter Linux und Windows, LaTeX-Build des Papers).
 - Python-Referenzbausteine mit Tests: Fourier-Konvention, Winkelspektrum, Rayleigh-Sommerfeld- und
