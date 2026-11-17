@@ -13,6 +13,15 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 
 ### Hinzugefügt
 
+- Pupillentest der Debye-Stufe in C++: `chain._support` (die Pupille, die eine Strahlwolke
+  abdeckt) nutzt `fieldtracing._mesh.SupportTest`, wenn die Erweiterung installiert ist.
+  Punktlage in den Dreiecken und nächste Stichprobe laufen über Buckets, und die Suche endet beim
+  größten Saum (`reach`). Das Ergebnis ist Punkt für Punkt gleich wie mit scipy und etwa
+  fünfmal schneller.
+- `GridlessField.triangulation()` und `.tree()`: Delaunay-Triangulierung und KD-Baum werden je
+  Feld einmal gebaut und von `residual_at`, `phase_at` und der Debye-Pupille geteilt.
+  `residual_at` interpoliert alle drei Komponenten über eine Triangulierung statt über drei.
+  Die Ergebnisse sind bitgleich.
 - C++ für das Netz der Strahlwolken: optionale Erweiterung `fieldtracing._mesh` (pybind11,
   `setup.py`) für die Kanten, die Randdreiecke, den Zwei-Ring und den quadratischen Fit von
   `mesh` (Ableitungen und Hesse-Matrizen, die `fit_derivatives`, `mesh_jacobian_cloud` und die

@@ -64,3 +64,38 @@ def test_jacobian_of_a_lens_equals_python(monkeypatch: pytest.MonkeyPatch) -> No
     assert np.array_equal(fast.triangles, slow.triangles)
     assert np.array_equal(fast.valid, slow.valid) and np.array_equal(fast.caustic, slow.caustic)
     assert np.allclose(fast.determinant[fast.valid], slow.determinant[slow.valid], rtol=1e-9)
+
+
+def _field(points: FloatArray) -> object:
+    from fieldtracing.field import GridlessField
+
+    n = len(points)
+    return GridlessField(
+        points, np.zeros(n), np.zeros((n, 2)), np.zeros((n, 2, 2)), np.ones((n, 3), complex), 0.6
+    )
+
+
+@pytest.mark.parametrize("seed", [1, 2])
+def test_support_test_equals_python(monkeypatch: pytest.MonkeyPatch, seed: int) -> None:
+    """The pupil a cloud covers (`chain._support`): C++ and scipy agree point by point – inside
+    the allowed triangles, in a triangle across the obstruction or the gap, at the edge and far
+    outside."""
+    from fieldtracing import chain
+
+    rng = np.random.default_rng(seed)
+    p = rng.uniform(-1.0, 1.0, size=(4000, 2))
+    p = p[(np.hypot(p[:, 0], p[:, 1]) <= 1.0) & (np.hypot(p[:, 0], p[:, 1]) > 0.3)]
+    p = p[np.abs(p[:, 1] - 0.5) > 0.08]  # a slit
+    g = _field(p)
+    q = rng.uniform(-1.6, 1.6, size=(60000, 2))
+    q = np.concatenate([q, rng.uniform(-50.0, 50.0, size=(2000, 2))])
+    fast = chain._support(g)  # type: ignore[arg-type]
+    monkeypatch.setattr(mesh, "USE_CPP", False)
+    slow = chain._support(g)  # type: ignore[arg-type]
+    assert fast is not None and slow is not None
+    a, b = fast(q[:, 0], q[:, 1]), slow(q[:, 0], q[:, 1])
+    assert a.any() and not a.all()
+    assert np.count_nonzero(a != b) == 0
+    grid = np.linspace(-1.2, 1.2, 101)  # as the Debye weights call it: 2D arrays
+    xx, yy = np.meshgrid(grid, grid)
+    assert np.array_equal(fast(xx, yy), slow(xx, yy))

@@ -103,9 +103,143 @@ void solve(std::array<double, 25> a, std::vector<double>& b, std::size_t cols) {
     }
 }
 
+// The pupil a ray cloud covers (fieldtracing.chain._support): inside the allowed triangles of its
+// Delaunay mesh, or within `reach` of the nearest sample. Point location and nearest sample over
+// uniform buckets.
+class SupportTest {
+ public:
+  SupportTest(const Doubles& points, const Ints& simplices, const py::array_t<bool>& allowed,
+              const Doubles& reach) {
+    if (points.ndim() != 2 || points.shape(1) != 2) throw std::invalid_argument("points must be (N, 2)");
+    if (simplices.ndim() != 2 || simplices.shape(1) != 3) throw std::invalid_argument("simplices must be (M, 3)");
+    n_ = static_cast<std::size_t>(points.shape(0));
+    p_.assign(points.data(), points.data() + 2 * n_);
+    reach_.assign(reach.data(), reach.data() + n_);
+    for (const double r : reach_) max_reach_ = std::max(max_reach_, r);
+    const auto m = static_cast<std::size_t>(simplices.shape(0));
+    tri_.assign(simplices.data(), simplices.data() + 3 * m);
+    allowed_.assign(allowed.data(), allowed.data() + m);
+    x0_ = y0_ = std::numeric_limits<double>::infinity();
+    double x1 = -x0_, y1 = -y0_;
+    for (std::size_t i = 0; i < n_; ++i) {
+      x0_ = std::min(x0_, p_[2 * i]);
+      x1 = std::max(x1, p_[2 * i]);
+      y0_ = std::min(y0_, p_[2 * i + 1]);
+      y1 = std::max(y1, p_[2 * i + 1]);
+    }
+    const double w = std::max(x1 - x0_, 1e-300), h = std::max(y1 - y0_, 1e-300);
+    const double cells = std::max<double>(1.0, static_cast<double>(n_) / 2.0);
+    cell_ = std::sqrt(w * h / cells);
+    if (!(cell_ > 0)) cell_ = std::max(w, h);
+    nx_ = static_cast<long>(std::floor(w / cell_)) + 1;
+    ny_ = static_cast<long>(std::floor(h / cell_)) + 1;
+    tri_bucket_.assign(static_cast<std::size_t>(nx_ * ny_), {});
+    pt_bucket_.assign(static_cast<std::size_t>(nx_ * ny_), {});
+    for (std::size_t i = 0; i < n_; ++i) pt_bucket_[bucket(cx(p_[2 * i]), cy(p_[2 * i + 1]))].push_back(static_cast<std::int64_t>(i));
+    for (std::size_t t = 0; t < m; ++t) {
+      double a0 = HUGE_VAL, a1 = -HUGE_VAL, b0 = HUGE_VAL, b1 = -HUGE_VAL;
+      for (int c = 0; c < 3; ++c) {
+        const auto v = static_cast<std::size_t>(tri_[3 * t + static_cast<std::size_t>(c)]);
+        a0 = std::min(a0, p_[2 * v]);
+        a1 = std::max(a1, p_[2 * v]);
+        b0 = std::min(b0, p_[2 * v + 1]);
+        b1 = std::max(b1, p_[2 * v + 1]);
+      }
+      for (long j = cy(b0); j <= cy(b1); ++j)
+        for (long i = cx(a0); i <= cx(a1); ++i) tri_bucket_[bucket(i, j)].push_back(static_cast<std::int64_t>(t));
+    }
+  }
+
+  py::array_t<bool> inside(const Doubles& qx, const Doubles& qy) const {
+    if (qx.size() != qy.size()) throw std::invalid_argument("x and y differ in size");
+    const auto q = static_cast<std::size_t>(qx.size());
+    py::array_t<bool> out(qx.request().shape);
+    bool* o = out.mutable_data();
+    const double* x = qx.data();
+    const double* y = qy.data();
+    {
+      py::gil_scoped_release free;
+      for (std::size_t k = 0; k < q; ++k) o[k] = test(x[k], y[k]);
+    }
+    return out;
+  }
+
+ private:
+  long cx(double x) const { return std::clamp(static_cast<long>(std::floor((x - x0_) / cell_)), 0L, nx_ - 1); }
+  long cy(double y) const { return std::clamp(static_cast<long>(std::floor((y - y0_) / cell_)), 0L, ny_ - 1); }
+  std::size_t bucket(long i, long j) const { return static_cast<std::size_t>(j * nx_ + i); }
+
+  // in triangle t (barycentric, with the tolerance of scipy's find_simplex)
+  bool in_triangle(std::size_t t, double x, double y) const {
+    const auto a = static_cast<std::size_t>(tri_[3 * t]), b = static_cast<std::size_t>(tri_[3 * t + 1]),
+               c = static_cast<std::size_t>(tri_[3 * t + 2]);
+    const double ax = p_[2 * a], ay = p_[2 * a + 1];
+    const double e1x = p_[2 * b] - ax, e1y = p_[2 * b + 1] - ay, e2x = p_[2 * c] - ax, e2y = p_[2 * c + 1] - ay;
+    const double det = e1x * e2y - e1y * e2x;
+    if (det == 0.0) return false;
+    const double dx = x - ax, dy = y - ay;
+    const double l1 = (dx * e2y - dy * e2x) / det, l2 = (e1x * dy - e1y * dx) / det;
+    const double eps = 100.0 * std::numeric_limits<double>::epsilon();
+    return l1 >= -eps && l2 >= -eps && 1.0 - l1 - l2 >= -eps;
+  }
+
+  bool test(double x, double y) const {
+    const bool on_grid = x >= x0_ - cell_ && y >= y0_ - cell_ && x <= x0_ + (static_cast<double>(nx_) + 1) * cell_ &&
+                         y <= y0_ + (static_cast<double>(ny_) + 1) * cell_;
+    if (on_grid) {
+      for (const auto t : tri_bucket_[bucket(cx(x), cy(y))])
+        if (in_triangle(static_cast<std::size_t>(t), x, y)) {
+          if (allowed_[static_cast<std::size_t>(t)]) return true;
+          break;  // in a triangle across a gap: the reach of the nearest sample decides
+        }
+    }
+    // nearest sample: rings of buckets around the query's (clamped) bucket
+    const long i0 = cx(x), j0 = cy(y);
+    const double ox = std::max({x0_ - x, x - (x0_ + static_cast<double>(nx_) * cell_), 0.0});
+    const double oy = std::max({y0_ - y, y - (y0_ + static_cast<double>(ny_) * cell_), 0.0});
+    const double outside = std::hypot(ox, oy);  // distance of the query to the bucket grid
+    // only a sample within its reach counts, and every reach is ≤ max_reach_: the nearest sample
+    // beyond that radius cannot pass, so the search stops there (same answer as the exact nearest)
+    if (outside > max_reach_) return false;
+    double best = HUGE_VAL;
+    std::int64_t arg = -1;
+    const long rings = std::min(std::max(nx_, ny_), static_cast<long>(std::ceil(max_reach_ / cell_)) + 1);
+    for (long r = 0; r <= rings; ++r) {
+      if (arg >= 0 && std::max(outside, (static_cast<double>(r) - 1.0) * cell_) > best) break;  // lower bound
+      for (long j = j0 - r; j <= j0 + r; ++j) {
+        if (j < 0 || j >= ny_) continue;
+        for (long i = i0 - r; i <= i0 + r; ++i) {
+          if (i < 0 || i >= nx_ || (std::abs(i - i0) != r && std::abs(j - j0) != r)) continue;
+          for (const auto v : pt_bucket_[bucket(i, j)]) {
+            const double d = std::hypot(p_[2 * static_cast<std::size_t>(v)] - x, p_[2 * static_cast<std::size_t>(v) + 1] - y);
+            if (d < best) {
+              best = d;
+              arg = v;
+            }
+          }
+        }
+      }
+    }
+    return arg >= 0 && best <= max_reach_ && best <= reach_[static_cast<std::size_t>(arg)];
+  }
+
+  std::size_t n_ = 0;
+  std::vector<double> p_, reach_;
+  std::vector<std::int64_t> tri_;
+  std::vector<bool> allowed_;
+  double x0_ = 0, y0_ = 0, cell_ = 1, max_reach_ = 0;
+  long nx_ = 1, ny_ = 1;
+  std::vector<std::vector<std::int64_t>> tri_bucket_, pt_bucket_;
+};
+
 }  // namespace
 
 PYBIND11_MODULE(_mesh, m) {
+  py::class_<SupportTest>(m, "SupportTest", "The pupil a ray cloud covers (chain._support), in C++")
+      .def(py::init<const Doubles&, const Ints&, const py::array_t<bool>&, const Doubles&>(), py::arg("points"),
+           py::arg("simplices"), py::arg("allowed"), py::arg("reach"))
+      .def("inside", &SupportTest::inside, py::arg("x"), py::arg("y"));
+
   m.doc() = "Mesh operations of fieldtracing.mesh in C++ (optional)";
 
   m.def("edges", [](const Ints& tri) {
