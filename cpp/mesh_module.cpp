@@ -44,11 +44,13 @@ std::int64_t vertex_count(const Ints& tri) {
 
 // symmetric eigenvalues of a 5×5 matrix (cyclic Jacobi), ascending
 std::array<double, 5> eigenvalues(std::array<double, 25> a) {
-  for (int sweep = 0; sweep < 100; ++sweep) {
+  double norm = 0.0;  // Frobenius norm², invariant under the rotations
+  for (const double x : a) norm += x * x;
+  for (int sweep = 0; sweep < 50; ++sweep) {
     double off = 0.0;
     for (int p = 0; p < 5; ++p)
       for (int q = p + 1; q < 5; ++q) off += a[5 * p + q] * a[5 * p + q];
-    if (off < 1e-300) break;
+    if (off <= 1e-32 * norm || norm == 0.0) break;  // off-diagonal at rounding level
     for (int p = 0; p < 5; ++p)
       for (int q = p + 1; q < 5; ++q) {
         const double apq = a[5 * p + q];
