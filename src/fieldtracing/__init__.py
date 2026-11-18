@@ -4,4 +4,4 @@ Python prototypes and reference tests; the verified kernels are later ported to 
 (see docs/integration-raytatouille.md).
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
