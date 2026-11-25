@@ -99,6 +99,21 @@ Auch in 2D fällt die Abweichung wie c/N_F, mit c ≈ 0,30 in der Fokalebene und
 ±λ/NA² (dort wirkt die Fokusverschiebung). Die FFT trägt nichts bei (n = 256 ändert die Werte um
 < 1 %). Laufzeit 0,1 s je Ebene, daher kein `slow`.
 
+**Pupille neben der Achse (#85):** ideale Kugelwelle auf den Achspunkt in 58 mm, Pupillenscheibe
+1,2 mm um (s, 0), auf 24 Ringen bis zum Rand abgetastet (λ = 546 nm). Spitze gegen das
+Rayleigh-Sommerfeld-Integral im Fokus (Mittelpunktsquadratur 1400², unabhängig vom Debye-Schritt),
+Leistung gegen die Leistung durch die Pupille (πR²):
+
+| s | n | Spitze (Abweichung) | Leistung (Abweichung) |
+| --- | --- | --- | --- |
+| 0 | 128 | −0,03 % | −0,56 % |
+| 0,6 mm | 128 / 256 | −0,07 % / −0,05 % | −0,85 % / −0,42 % |
+| 1,2 mm | 128 / 256 | −0,03 % / −0,05 % | −1,05 % / −0,54 % |
+
+Vorher +6,3 % Spitze und +2,1 % Leistung: Der Träger wurde auch um die Randstichproben um eine
+halbe Stichprobenweite erweitert, obwohl sie auf dem Rand liegen. Der Leistungsfehler ist erster
+Ordnung im k-Schritt (`test_debye.py`).
+
 **Vektor-Fokus** (aplanatische Linse, x-polarisiert) gegen die Bessel-Quadratur der
 Richards-Wolf-Integrale: maximaler Fehler 1,3·10⁻⁵ (NA 0,5) bzw. 1,9·10⁻⁵ (NA 0,9) relativ zum
 Maximum; Verhältnis der Maxima |E_z|/|E_x| = 0,19 bzw. 0,39. Das Feld ist divergenzfrei

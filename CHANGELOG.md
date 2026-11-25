@@ -13,6 +13,16 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   gelöst (2650 Stichproben hinter einer Tubuslinse, Teilmenge 407). Die Anpassung endet jetzt
   dort, mit dem größten Residuum über alle Stichproben als Schranke; diese gleicht dem Optimum
   des ganzen Programms (Test gegen das volle lineare Programm, relativ 10⁻⁶).
+- Debye mit einer Pupille neben der Achse (#85, aus PhotonPower/RTT-Fusion#88): 6 % zu hohe
+  Spitze und 2 % zu viel Leistung. `chain._support` erweiterte den Träger um jede
+  Randstichprobe um eine halbe Stichprobenweite. Das ist richtig für ein von der Pupille
+  beschnittenes Raster, dessen Rand zwischen den Stichproben liegt, aber nicht für Strahlwolken,
+  deren Randring auf dem Rand liegt. Bei zentrierter Pupille setzte die Blendenscheibe den Rand,
+  daneben der Träger. Randstichproben, durch die der Umriss gleichmäßig gekrümmt läuft
+  (Abweichung von der Sehne ihrer beiden Nachbarn klein, nicht null und bei den Nachbarn
+  ähnlich; `SUPPORT_SMOOTH`), gelten jetzt als auf dem Rand und werden nicht erweitert. Die
+  Treppe eines beschnittenen Rasters behält die halbe Weite. Spitze jetzt auf 0,1 % am
+  Rayleigh-Sommerfeld-Integral, Leistung −1,0 % bei n = 128 und −0,5 % bei n = 256.
 
 ## [0.2.0] - 2026-11-18
 

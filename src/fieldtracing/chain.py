@@ -688,6 +688,54 @@ def _mesh_cpp() -> Any:
     return mesh._cpp()
 
 
+#: an outline sample lies on the pupil's edge where it deviates from the line through its two
+#: outline neighbours by at most this fraction of its spacing (`_support`, issue #85)
+SUPPORT_SMOOTH = 0.1
+
+
+def _on_smooth_outline(
+    pts: FloatArray, simplices: NDArray[np.int64], local: FloatArray
+) -> NDArray[np.bool_]:
+    """The samples on the outline of the triangles `simplices` through which it runs smoothly:
+    exactly two outline neighbours, and a distance from the line through them of at most
+    SUPPORT_SMOOTH times the sample's spacing `local`."""
+    edges = np.sort(
+        np.concatenate([simplices[:, [0, 1]], simplices[:, [1, 2]], simplices[:, [2, 0]]]), axis=1
+    )
+    unique, count = np.unique(edges, axis=0, return_counts=True)
+    outline = unique[count == 1]
+    smooth = np.zeros(len(pts), dtype=bool)
+    if len(outline) == 0:
+        return smooth
+    ends = outline.ravel()
+    degree = np.bincount(ends, minlength=len(pts))
+    order = np.argsort(ends, kind="stable")
+    other = outline[:, ::-1].ravel()  # the other end of each outline edge, per end
+    by_vertex = ends[order]
+    neighbours = other[order]
+    first = np.searchsorted(by_vertex, np.arange(len(pts)))
+    two = np.flatnonzero(degree == 2)
+    a = pts[neighbours[first[two]]]
+    b = pts[neighbours[first[two] + 1]]
+    v = pts[two]
+    chord = b - a
+    length = np.hypot(chord[:, 0], chord[:, 1])
+    cross = np.abs(chord[:, 0] * (v[:, 1] - a[:, 1]) - chord[:, 1] * (v[:, 0] - a[:, 0]))
+    deviation = np.zeros(len(pts))
+    deviation[two] = cross / np.maximum(length, 1e-300)
+    # a curve sampled along its length bends a little at every sample, evenly: the deviation is
+    # small, not zero, and its neighbours' is alike. A grid cut by the pupil runs straight between
+    # steps (zero) and turns at them (large): there the edge lies beyond the samples.
+    small = (deviation > 1e-6 * local) & (deviation <= SUPPORT_SMOOTH * local)
+    left, right = neighbours[first[two]], neighbours[first[two] + 1]
+    ok_left = (deviation[left] >= 0.5 * deviation[two]) & (deviation[left] <= 2.0 * deviation[two])
+    ok_right = (deviation[right] >= 0.5 * deviation[two]) & (
+        deviation[right] <= 2.0 * deviation[two]
+    )
+    smooth[two] = small[two] & ok_left & ok_right
+    return smooth
+
+
 def _support(g: GridlessField) -> Callable[[FloatArray, FloatArray], NDArray[np.bool_]] | None:
     """The pupil the samples cover (issue #79): the union of their Delaunay triangles without
     inner triangles across gaps (an obstruction stays a hole), widened around each sample by half
@@ -696,6 +744,13 @@ def _support(g: GridlessField) -> Callable[[FloatArray, FloatArray], NDArray[np.
     sampled disc is thus covered entirely and gives the result of the disc alone), while samples
     placed densely on an edge (edge-refined rays) widen it only by their small spacing. The edge
     is known only to this half spacing, so its error is first order in the local sample spacing.
+
+    Samples that lie on the edge themselves – the rim ring of a ray-traced pupil – are not widened
+    (issue #85: a pupil beside the axis, where the stop's disc does not cut, came out 2 % larger in
+    power and 6 % in peak): an outline sample counts as on the edge where the outline runs smoothly
+    through it, i.e. it lies within SUPPORT_SMOOTH of its spacing from the line through its two
+    neighbours on the outline; the staircase of a grid cut by the pupil does not.
+
     Triangles with an edge on the convex hull stay (along a curved edge they are long and flat but
     inside the pupil), so a concave outer outline is filled to its hull. None (the stop's disc)
     for fewer than three samples.
@@ -717,6 +772,7 @@ def _support(g: GridlessField) -> Callable[[FloatArray, FloatArray], NDArray[np.
     on_hull = np.any(tri.neighbors < 0, axis=1)
     allowed = (longest <= SUPPORT_GAP * np.max(local[tri.simplices], axis=1)) | on_hull
     reach = 0.5 * local
+    reach[_on_smooth_outline(pts, tri.simplices[allowed], local)] = 0.0  # on the edge (#85)
     cpp = _mesh_cpp()
     if cpp is not None:  # the same test in C++ (fieldtracing._mesh)
         test = cpp.SupportTest(pts, np.asarray(tri.simplices, dtype=np.int64), allowed, reach)

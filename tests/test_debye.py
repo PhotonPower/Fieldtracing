@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from itertools import pairwise
+from typing import Any
 
 import numpy as np
 import pytest
@@ -356,3 +357,70 @@ def test_issue_79_chain_debye_keeps_the_pupil_shape(shape: str) -> None:
     assert isinstance(out, GriddedField)
     after = float(np.sum(np.abs(np.asarray(out.values)) ** 2) * out.step**2)
     assert after == pytest.approx(before, rel=2e-2)
+
+
+# ----- issue #85: a pupil beside the axis (rays sampled on rings up to the rim) ----------------
+
+
+def _ring_cloud(shift: float, radius: float, dist: float, k: float, lam: float, rings: int) -> Any:
+    """An ideal spherical wave converging to the axis point at `dist`, sampled on rings up to the
+    rim of a disc of `radius` about (shift, 0) – the outline samples lie on the edge, as the rim
+    rays of a ray-traced pupil do."""
+    from fieldtracing.field import GridlessField
+
+    px, py = [0.0], [0.0]
+    for r in range(1, rings + 1):
+        for j in range(6 * r):
+            a = 2 * np.pi * j / (6 * r)
+            px.append(r / rings * np.cos(a))
+            py.append(r / rings * np.sin(a))
+    p = np.stack([shift + radius * np.array(px), radius * np.array(py)], axis=-1)
+    w = np.sqrt(np.sum(p * p, axis=1) + dist * dist)
+    hess = -k * (
+        np.eye(2)[None] / w[:, None, None] - np.einsum("ni,nj->nij", p, p) / w[:, None, None] ** 3
+    )
+    u = np.zeros((len(p), 3), dtype=np.complex128)
+    u[:, 1] = 1.0
+    return GridlessField(p, -k * (w - dist), -k * p / w[:, None], hess, u, lam)
+
+
+def _rs_at_focus(shift: float, radius: float, dist: float, k: float, m: int = 1400) -> float:
+    """|E|² at the focus by the Rayleigh-Sommerfeld integral (eq. rs_kernel) of the unit spherical
+    wave over the disc – midpoint quadrature, independent of the Debye step."""
+    x = (np.arange(m) + 0.5) / m * 2 * radius - radius
+    xx, yy = np.meshgrid(x + shift, x)
+    inside = (xx - shift) ** 2 + yy**2 <= radius * radius
+    xs, ys = xx[inside], yy[inside]
+    r = np.sqrt(xs * xs + ys * ys + dist * dist)
+    u = np.exp(-1j * k * (r - dist))
+    kern = rayleigh_sommerfeld_kernel(-xs, -ys, dist, k)
+    return float(abs(np.sum(u * kern) * (2 * radius / m) ** 2) ** 2)
+
+
+@pytest.mark.parametrize("shift", [0.6, 1.2])
+def test_issue_85_pupil_beside_the_axis(shift: float) -> None:
+    """A pupil beside the axis gave 6 % too high a peak and 2 % too much power: the support was
+    widened by half a sample spacing beyond the rim samples, which lie on the edge (the stop's
+    disc is larger than the pupil here and does not cut). Peak against the Rayleigh-Sommerfeld
+    integral at the focus (0.2 %), power against the power through the pupil, its error first
+    order in the k-step."""
+    from fieldtracing.chain import debye
+    from fieldtracing.field import GriddedField
+
+    lam, dist, radius = 0.546, 58.0, 1.2
+    k = wavenumber(lam)
+    field = _ring_cloud(shift, radius, dist, k, lam, rings=24)
+    a = float(np.max(np.hypot(field.points[:, 0], field.points[:, 1])))
+    errors = []
+    for n in (128, 256):
+        out, _ = debye(field, dist, a / np.hypot(a, dist), n=n)
+        assert isinstance(out, GriddedField)
+        intensity = np.sum(np.abs(np.asarray(out.values)) ** 2, axis=-1)
+        peak = float(intensity.max())
+        assert peak == pytest.approx(_rs_at_focus(shift, radius, dist, k), rel=2e-3)
+        power = float(intensity.sum()) * out.step**2
+        errors.append(abs(power / (np.pi * radius**2) - 1.0))
+    # the edge on the k-grid is first order in its step, as for the centred disc (0.56 % and
+    # 0.30 % less power at n = 128 and 256); the pupil beside the axis gets about half the samples
+    assert errors[0] < 1.5e-2
+    assert errors[1] < 0.6 * errors[0]
