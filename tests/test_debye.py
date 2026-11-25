@@ -424,3 +424,49 @@ def test_issue_85_pupil_beside_the_axis(shift: float) -> None:
     # 0.30 % less power at n = 128 and 256); the pupil beside the axis gets about half the samples
     assert errors[0] < 1.5e-2
     assert errors[1] < 0.6 * errors[0]
+
+
+@pytest.mark.parametrize("samples", [61, 121])
+def test_a_concave_outline_is_not_filled_to_its_hull(samples: int) -> None:
+    """A pupil concave on one side (a sector of an annulus – the footprint of a tilted beam on a
+    curved pupil): the triangles on the convex hull bridged the concavity and filled it, +4 % power
+    with 61 and +41 % with 121 samples across. Only flat hull triangles stay (slivers along a
+    convex edge). Reference: midpoint quadrature of cos θ (|U| = 1) over the exact shape, as for
+    issue #79."""
+    from fieldtracing.chain import debye
+    from fieldtracing.field import GriddedField, GridlessField
+
+    lam, dist, radius = 0.546, 164.5, 4.4
+    k = wavenumber(lam)
+
+    def pupil(x: FloatArray, y: FloatArray) -> NDArray[np.bool_]:
+        r = np.hypot(x, y + 3.0)
+        return np.asarray((r <= 7.0) & (r >= 4.5) & (np.hypot(x, y) <= radius))
+
+    g = np.linspace(-radius, radius, samples)
+    xx, yy = np.meshgrid(g, g)
+    p = np.stack([xx.ravel(), yy.ravel()], axis=-1)
+    p = p[pupil(p[:, 0], p[:, 1])]
+    rr = np.sqrt(np.sum(p * p, axis=1) + dist * dist)
+    hess = -k * (np.eye(2)[None] - np.einsum("ni,nj->nij", p, p) / rr[:, None, None] ** 2)
+    hess = hess / rr[:, None, None]
+    u = np.zeros((len(p), 3), dtype=np.complex128)
+    u[:, 0] = 1.0
+    field = GridlessField(p, -k * rr, -k * p / rr[:, None], hess, u, lam, 1.0)
+
+    h = 2e-3
+    fine = np.arange(-radius + h / 2, radius, h)
+    fx, fy = np.meshgrid(fine, fine)
+    before = float(np.sum(pupil(fx, fy) * _cos_theta(fx, fy, dist)) * h * h)
+
+    errors = []
+    for n in (128, 256):
+        out, _ = debye(field, dist, radius / np.hypot(radius, dist), n=n, pad=2)
+        assert isinstance(out, GriddedField)
+        after = float(np.sum(np.abs(np.asarray(out.values)) ** 2) * out.step**2)
+        errors.append(after / before - 1.0)
+    # not filled (was +4 % and +41 %); the edge is first order in the sample spacing and the
+    # k-step, and this shape has much edge for its area: −3.1 % / −2.4 % at n = 128 for 61 / 121
+    # samples across (the support alone −1.1 % / −0.8 %), as the obstruction of issue #79
+    assert -3.5e-2 < errors[0] < 0.0
+    assert abs(errors[1]) < abs(errors[0])

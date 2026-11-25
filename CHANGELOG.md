@@ -16,6 +16,12 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
   ähnlich; `SUPPORT_SMOOTH`), gelten jetzt als auf dem Rand und werden nicht erweitert. Die
   Treppe eines beschnittenen Rasters behält die halbe Weite. Spitze jetzt auf 0,1 % am
   Rayleigh-Sommerfeld-Integral, Leistung −1,0 % bei n = 128 und −0,5 % bei n = 256.
+- Debye-Träger (`chain._support`) mit konkavem Umriss: Die Dreiecke auf der konvexen Hülle
+  blieben alle im Träger und überbrückten Einbuchtungen. Ein Ringausschnitt bekam so +4 % (61
+  Stichproben je Achse) bzw. +41 % (121) Leistung. Hülldreiecke bleiben jetzt nur, wenn sie flach
+  sind (Höhe über der längsten Kante höchstens `SUPPORT_HULL_HEIGHT` = 2 Stichprobenweiten), wie
+  die Splitter entlang eines gewölbten Randes. Der Ringausschnitt liegt jetzt bei −3,1 % bzw.
+  −2,4 % (n = 128), erster Ordnung im Rand wie die Formen aus #79.
 
 ## [0.2.0] - 2026-11-18
 
