@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 import numpy as np
 import pytest
+from scipy.optimize import linprog
 
+from fieldtracing import selection
 from fieldtracing._types import FloatArray
 from fieldtracing.selection import fit_curvature, fit_curvature_radial, sft_samples
 from fieldtracing.units import wavenumber
@@ -65,3 +68,53 @@ def test_sample_counts_of_the_example() -> None:
     step_par, n_par = sft_samples(30.0, -K / F, 10.0, 972.0)
     assert step_par == pytest.approx(math.pi / 972.0)  # limited by the residual phase
     assert n_par > 1.8 * n
+
+
+DATA = Path(__file__).parent / "data" / "curvature_loop_86.npz"
+
+
+def _full_lp(points: FloatArray, gradient: FloatArray) -> float:
+    """Optimum of the minimax program over all samples, solved directly (independent of the
+    subset loop): min t subject to |g_x - c11 x - c12 y| ≤ t, |g_y - c12 x - c22 y| ≤ t."""
+    x, y = points[:, 0], points[:, 1]
+    zero, one = np.zeros_like(x), np.ones_like(x)
+    rx = np.stack([x, y, zero], axis=1)
+    ry = np.stack([zero, x, y], axis=1)
+    a = np.concatenate(
+        [
+            np.column_stack([-rx, -one]),
+            np.column_stack([rx, -one]),
+            np.column_stack([-ry, -one]),
+            np.column_stack([ry, -one]),
+        ]
+    )
+    b = np.concatenate([-gradient[:, 0], gradient[:, 0], -gradient[:, 1], gradient[:, 1]])
+    bounds = [(None, None), (None, None), (None, None), (0.0, None)]
+    res = linprog([0.0, 0.0, 0.0, 1.0], A_ub=a, b_ub=b, bounds=bounds)
+    assert res.success
+    return float(res.x[3])
+
+
+def test_the_fit_ends_when_the_subset_stops_growing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Issue #86: 2650 samples of ∇ψ behind a tube lens (PhotonPower/RTT-Fusion#135) on which the
+    subset stopped growing at 407 samples – every violated sample was in it already, HiGHS
+    solving to about 1e-7 against the loop's 1e-9 – and the same program was solved forever.
+    The fit ends after a few programs with a bound that holds on every sample and is the
+    optimum of the whole program."""
+    data = np.load(DATA)
+    points, gradient = np.asarray(data["points"]), np.asarray(data["gradient"])
+    calls: list[int] = []
+    lp = selection._curvature_lp
+
+    def counting(p: FloatArray, g: FloatArray) -> tuple[FloatArray, float]:
+        calls.append(len(p))
+        if len(calls) > 50:
+            raise AssertionError(f"the fit does not end: subsets {calls[:3]} … {calls[-3:]}")
+        return lp(p, g)
+
+    monkeypatch.setattr(selection, "_curvature_lp", counting)
+    c_matrix, bound = fit_curvature(points, gradient)
+    assert len(calls) < 10, calls
+    residual = np.max(np.abs(gradient - points @ c_matrix), axis=1)
+    assert bound >= float(residual.max())  # the bound holds everywhere
+    assert bound == pytest.approx(_full_lp(points, gradient), rel=1e-6)
