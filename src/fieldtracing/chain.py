@@ -680,6 +680,11 @@ def resample(
 #: local sample spacing at its corners spans a gap (an obstruction) and is not part of the pupil
 SUPPORT_GAP = 3.0
 
+#: a triangle on the convex hull stays in the pupil when its height over its longest edge is at
+#: most this multiple of the local spacing – a sliver along a convex edge; a higher one bridges a
+#: concavity of the outline (`_support`)
+SUPPORT_HULL_HEIGHT = 2.0
+
 
 def _mesh_cpp() -> Any:
     """The C++ extension `fieldtracing._mesh`, or None (not installed, or `mesh.USE_CPP` off)."""
@@ -751,9 +756,11 @@ def _support(g: GridlessField) -> Callable[[FloatArray, FloatArray], NDArray[np.
     through it, i.e. it lies within SUPPORT_SMOOTH of its spacing from the line through its two
     neighbours on the outline; the staircase of a grid cut by the pupil does not.
 
-    Triangles with an edge on the convex hull stay (along a curved edge they are long and flat but
-    inside the pupil), so a concave outer outline is filled to its hull. None (the stop's disc)
-    for fewer than three samples.
+    Triangles with an edge on the convex hull stay where they are flat (along a curved edge they
+    are long slivers inside the pupil: height at most SUPPORT_HULL_HEIGHT spacings); a higher one
+    bridges a concavity of the outline and is left out, so a concave outline keeps its shape
+    (a sector of an annulus was filled to its hull, +41 % power). None (the stop's disc) for fewer
+    than three samples.
     """
     from scipy.spatial import QhullError
 
@@ -770,7 +777,11 @@ def _support(g: GridlessField) -> Callable[[FloatArray, FloatArray], NDArray[np.
     corners = pts[tri.simplices]
     longest = np.max(np.linalg.norm(corners - np.roll(corners, 1, axis=1), axis=2), axis=1)
     on_hull = np.any(tri.neighbors < 0, axis=1)
-    allowed = (longest <= SUPPORT_GAP * np.max(local[tri.simplices], axis=1)) | on_hull
+    spacing = np.max(local[tri.simplices], axis=1)
+    edge_a, edge_b = corners[:, 1] - corners[:, 0], corners[:, 2] - corners[:, 0]
+    area = 0.5 * np.abs(edge_a[:, 0] * edge_b[:, 1] - edge_a[:, 1] * edge_b[:, 0])
+    flat = 2.0 * area / np.maximum(longest, 1e-300) <= SUPPORT_HULL_HEIGHT * spacing
+    allowed = (longest <= SUPPORT_GAP * spacing) | (on_hull & flat)
     reach = 0.5 * local
     reach[_on_smooth_outline(pts, tri.simplices[allowed], local)] = 0.0  # on the edge (#85)
     cpp = _mesh_cpp()

@@ -114,6 +114,14 @@ Vorher +6,3 % Spitze und +2,1 % Leistung: Der Träger wurde auch um die Randstic
 halbe Stichprobenweite erweitert, obwohl sie auf dem Rand liegen. Der Leistungsfehler ist erster
 Ordnung im k-Schritt (`test_debye.py`).
 
+**Konkaver Umriss:** Ringausschnitt (4,5 mm ≤ |ρ − (0, −3)| ≤ 7 mm, |ρ| ≤ 4,4 mm) auf einem
+beschnittenen Raster, Leistung gegen die Mittelpunktsquadratur über die exakte Form wie bei #79:
+
+| Stichproben je Achse | vorher | n = 128 | n = 256 | Träger allein |
+| --- | --- | --- | --- | --- |
+| 61 | +3,9 % | −3,1 % | −2,4 % | −1,1 % |
+| 121 | +41 % | −2,4 % | −1,8 % | −0,8 % |
+
 **Vektor-Fokus** (aplanatische Linse, x-polarisiert) gegen die Bessel-Quadratur der
 Richards-Wolf-Integrale: maximaler Fehler 1,3·10⁻⁵ (NA 0,5) bzw. 1,9·10⁻⁵ (NA 0,9) relativ zum
 Maximum; Verhältnis der Maxima |E_z|/|E_x| = 0,19 bzw. 0,39. Das Feld ist divergenzfrei
