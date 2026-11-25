@@ -4,6 +4,11 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-25
+
+Korrekturen aus dem Einsatz in PhotonPower/RTT-Fusion (#135): eine Krümmungsanpassung, die nicht
+endete, und der Träger des Debye-Fokus für Pupillen neben der Achse und mit konkavem Umriss.
+
 ### Behoben
 
 - `selection.fit_curvature` endete für manche Wolken nicht (#86, aus PhotonPower/RTT-Fusion#135):
