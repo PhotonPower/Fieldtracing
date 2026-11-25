@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 [project]
 # on PyPI as photonpower-fieldtracing (the name fieldtracing is taken there); import fieldtracing
 name = "photonpower-fieldtracing"
-version = "0.2.0"
+version = "0.2.1"
 description = "Numerical reference implementation of field tracing (hybrid field, PFT, SFT, LPIA)"
 readme = "README.md"
 license = "MIT"
