@@ -15,6 +15,11 @@ Gemessene Werte stammen aus den Tests bzw. aus `experiments/pruefrechnungen_1d.p
 | T8 | Fresnel-Operator | analytisch | R + T = 1, r_p = −r_s bei 0°, r_p = 0 bei Brewster, Transversalität, Snellius | ✅ | `test_lpia.py` |
 | B | Beispiel Kapitel 7.5 | verkleinertes System gegen RS; Kennzahlen | Kennzahlen wie im Paper | ✅ Kennzahlen, Fokus gegen Richards-Wolf, Zwischenebene, verkleinertes System gegen RS (`docs/beispiel-7-5.md`, F3) | `test_selection.py`, `test_curvature_fit.py`, `test_example_7_5.py` |
 
+Minimax-Krümmung (`fit_curvature`) über eine wachsende Teilmenge (#86): Die 2650 Stichproben aus
+PhotonPower/RTT-Fusion#135 (`tests/data/curvature_loop_86.npz`), auf denen die Schleife ohne Ende
+lief, ergeben nach wenigen Programmen eine Schranke, die auf allen Stichproben gilt und dem
+Optimum des vollen linearen Programms auf 10⁻⁶ gleicht (`test_curvature_fit.py`).
+
 ## T6: SFT-Fehler (1D, c = 10⁵ mm⁻², a = 1 mm, Fenster 4 mm)
 
 | N | Δx | harte Blende | subpixelgewichtet |

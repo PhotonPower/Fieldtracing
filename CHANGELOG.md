@@ -6,6 +6,13 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen 
 
 ### Behoben
 
+- `selection.fit_curvature` endete für manche Wolken nicht (#86, aus PhotonPower/RTT-Fusion#135):
+  Die Teilmenge wächst um die verletzten Stichproben, bis keine mehr verletzt ist (Schwelle
+  10⁻⁹). HiGHS löst die Programme aber nur auf etwa 10⁻⁷ genau. Lagen alle verletzten
+  Stichproben schon in der Teilmenge, wuchs sie nicht mehr, und dasselbe Programm wurde ohne Ende
+  gelöst (2650 Stichproben hinter einer Tubuslinse, Teilmenge 407). Die Anpassung endet jetzt
+  dort, mit dem größten Residuum über alle Stichproben als Schranke; diese gleicht dem Optimum
+  des ganzen Programms (Test gegen das volle lineare Programm, relativ 10⁻⁶).
 - Debye mit einer Pupille neben der Achse (#85, aus PhotonPower/RTT-Fusion#88): 6 % zu hohe
   Spitze und 2 % zu viel Leistung. `chain._support` erweiterte den Träger um jede
   Randstichprobe um eine halbe Stichprobenweite. Das ist richtig für ein von der Pupille

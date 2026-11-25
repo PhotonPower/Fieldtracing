@@ -124,7 +124,10 @@ def fit_curvature(points: FloatArray, gradient: FloatArray) -> tuple[FloatArray,
     A minimax fit is fixed by a few extreme samples: large clouds are solved on a subset (the
     samples farthest out and with the largest gradients, and an even spread) that grows by the
     samples whose residual exceeds the subset's optimum until none does – the optimum of the
-    whole linear program, at the cost of a few small ones.
+    whole linear program, at the cost of a few small ones. The linear programs are solved to the
+    solver's accuracy (about 1e-7 relative): when every violated sample is in the subset already,
+    it no longer grows and the fit ends there (issue #86), with the largest residual over all
+    samples as the bound – an upper bound of the optimum within that accuracy.
 
     Args:
         points: (N, 2) sample positions in mm (include the aperture rim).
@@ -153,7 +156,10 @@ def fit_curvature(points: FloatArray, gradient: FloatArray) -> tuple[FloatArray,
         if violated.size == 0:
             return c, float(max(t, float(np.max(residual))))
         worst = violated[np.argsort(residual[violated])[-CURVATURE_SUBSET:]]
-        subset = np.union1d(subset, worst)
+        grown = np.union1d(subset, worst)
+        if grown.size == subset.size:  # the violation is the solver's accuracy (#86)
+            return c, float(max(t, float(np.max(residual))))
+        subset = grown
 
 
 def sft_samples(
